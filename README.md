@@ -33,7 +33,6 @@ Además, incluye una **aplicación móvil** para estudiantes visitantes que podr
 | **Gestión de Dependencias** | Node Package Manager (npm/yarn) |
 | **Control de Versiones** | GitHub |
 | **Gestor de Base de Datos** | PostgreSQL (principal), Firebase (para datos de encuestas y métricas) |
-| **Contenedores / Localhost** | Docker o Laragon |
 ---
 ## 🏗️ Arquitectura del Sistema
 El sistema sigue una **arquitectura basada en microservicios y contenedores**, donde cada componente cumple una función específica y se comunica mediante **API REST (HTTPS/JSON)**.
