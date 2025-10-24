@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import UCBHome from './UCBHome'; // nuevo: importar componente objetivo
+// (UCBHome import removido — Header ahora controla navegación interna a 'Inicio')
 import { 
   BarChart3, CalendarDays, MessageSquare, Laptop, LogIn, Menu, X, Globe, MapPin, 
   Mail, Phone, Clock, Facebook, Instagram, Twitter, Send, Zap, Loader2, Target, 
@@ -70,8 +70,8 @@ const ValueCard = ({ icon: Icon, title, description }) => (
   </div>
 );
 
-// Barra de Navegación Fija (Header) - actualizado: recibe openRegisterModal
-const Header = ({ openLoginModal, openRegisterModal, currentPage, setCurrentPage, openUcbExm }) => {
+// Barra de Navegación Fija (Header) - CORREGIDO
+const Header = ({ openLoginModal, openRegisterModal, currentPage, setCurrentPage }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const navItems = [
@@ -107,19 +107,11 @@ const Header = ({ openLoginModal, openRegisterModal, currentPage, setCurrentPage
             </button>
           ))}
 
-          {/* Botón Home: fuerza apertura de UCBHome.jsx */}
+          {/* Botón Home CORREGIDO */}
           <button
             onClick={() => {
-              if (typeof openUcbExm === 'function') {
-                openUcbExm(); // renderizamos UCBHome desde el wrapper
-              } else {
-                // fallback: navega al hash para compatibilidad con implementaciones anteriores
-                window.location.hash = '#ucbexm';
-                // forzamos reload si el hash ya estaba para garantizar que el otro componente lo lea
-                if (window.location.hash === '#ucbexm') {
-                  window.location.reload();
-                }
-              }
+              setCurrentPage('Inicio');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             className="bg-gray-200 text-[#003366] font-semibold py-2 px-4 rounded-full shadow-md transition duration-200 transform hover:scale-105"
           >
@@ -152,7 +144,7 @@ const Header = ({ openLoginModal, openRegisterModal, currentPage, setCurrentPage
           {isOpen ? <X className={`${COLORS.textLight.replace('text-', 'text-')} w-6 h-6`} /> : <Menu className={`${COLORS.textLight.replace('text-', 'text-')} w-6 h-6`} />}
         </button>
       </div>
-
+ 
       {/* Mobile Menu */}
       {isOpen && (
         <div className={`md:hidden ${COLORS.primary} pb-4`}>
@@ -809,39 +801,22 @@ const AIStrategyGenerator = () => {
   );
 };
 
-// --- Componente Principal Exportado (Renombrado a Home) ---
+// --- Componente Principal Exportado (Home) CORREGIDO ---
 const Home = () => {
-    // Si el usuario quiere abrir UCBHome (pantalla completa)
-    const [showUcbExm, setShowUcbExm] = useState(false);
-    const openUcbExm = () => setShowUcbExm(true);
-    const closeUcbExm = () => setShowUcbExm(false);
-
-    // Si se activa, renderizamos UCBHome totalmente (se reemplaza la UI actual)
-    if (showUcbExm) {
-      return (
-        <div className="min-h-screen bg-gray-50 font-inter">
-          <CustomStyles />
-          {/* Se asume que UCBHome maneja su propio header/layout.
-              Le pasamos una función para permitir 'volver' al Home actual si UCBHome la acepta. */}
-          <UCBHome onClose={closeUcbExm} />
-        </div>
-      );
-    }
-
     const [showLoginModal, setShowLoginModal] = useState(false);
-    const [showRegisterModal, setShowRegisterModal] = useState(false); // nuevo
-    const [showAllNewsModal, setShowAllNewsModal] = useState(false); // nuevo
+    const [showRegisterModal, setShowRegisterModal] = useState(false);
+    const [showAllNewsModal, setShowAllNewsModal] = useState(false);
     const [currentPage, setCurrentPage] = useState('Inicio');
-
-    const openLoginModal = () => setShowLoginModal(true);
-    const closeLoginModal = () => setShowLoginModal(false);
-
-    const openRegisterModal = () => setShowRegisterModal(true);
-    const closeRegisterModal = () => setShowRegisterModal(false);
-
-    const openAllNewsModal = () => setShowAllNewsModal(true);
-    const closeAllNewsModal = () => setShowAllNewsModal(false);
-
+ 
+     const openLoginModal = () => setShowLoginModal(true);
+     const closeLoginModal = () => setShowLoginModal(false);
+ 
+     const openRegisterModal = () => setShowRegisterModal(true);
+     const closeRegisterModal = () => setShowRegisterModal(false);
+ 
+     const openAllNewsModal = () => setShowAllNewsModal(true);
+     const closeAllNewsModal = () => setShowAllNewsModal(false);
+ 
     const valuePropositions = [
         { icon: CalendarDays, title: 'Gestión Centralizada', description: 'Registra, administra y centraliza la información de colegios y visitas en una única plataforma web eficiente.' },
         { icon: BarChart3, title: 'Análisis de Impacto', description: 'Genera reportes y dashboards para optimizar la planificación y mejorar la toma de decisiones basada en datos.' },
@@ -877,7 +852,6 @@ const Home = () => {
                 openRegisterModal={openRegisterModal}
                 currentPage={currentPage}
                 setCurrentPage={setCurrentPage}
-                openUcbExm={openUcbExm} // pasamos la función para abrir UCBHome
             />
 
             {/* Aumenté el padding-top para evitar que el header fijo se sobreponga al contenido */}

@@ -359,19 +359,19 @@ const Footer = () => (
                     <div className="space-y-3 text-sm text-gray-300 md:text-left md:pl-16">
                         <div className="flex items-start transition duration-200 hover:text-[#FFD700]">
                             <MapPin className="w-5 h-5 mr-3 flex-shrink-0 mt-1" />
-                            <p>Av. Arce esq. Montes, Sede Central La Paz, Bolivia.</p>
+                            <p>Av. 14 de Septiembre Nº 4807 esq. calle 2 de Obrajes</p>
                         </div>
                         <div className="flex items-center transition duration-200 hover:text-[#FFD700]">
                             <Phone className="w-5 h-5 mr-3 flex-shrink-0" />
-                            <p>(591-2) 2782222</p>
+                            <p>+ 591 (2) 2782222</p>
                         </div>
                         <div className="flex items-center transition duration-200 hover:text-[#FFD700]">
                             <Mail className="w-5 h-5 mr-3 flex-shrink-0" />
-                            <p>info@ucb.edu.bo</p>
+                            <p>informaciones@ucb.edu.bo</p>
                         </div>
                         <div className="flex items-center transition duration-200 hover:text-[#FFD700]">
                             <Clock className="w-5 h-5 mr-3 flex-shrink-0" />
-                            <p>Atención: Lun-Vie 8:30 - 18:30</p>
+                            <p>Atención: Lun-Vie 8:30 - 16:30</p>
                         </div>
                     </div>
                 </div>
@@ -597,7 +597,7 @@ const UCBHome = () => {
                             </h1>
 
                             <p className="text-xl md:text-3xl mb-10 max-w-3xl mx-auto text-gray-200 font-light italic border-t border-b border-gray-400/50 py-4">
-                                "La Ciencia al Servicio de Dios y del Hombre"
+                                "Aqui tienes tu lugar"
                             </p>
 
                             {/* CTA Principal */}
@@ -651,11 +651,14 @@ const UCBHome = () => {
 
                             {/* Columna de Imagen/Gráfico (Placeholder) */}
                             <div className="hidden lg:block animate-fadeIn" style={{ animationDelay: '0.4s' }}>
-                                <div className="bg-gray-100 p-10 rounded-2xl shadow-inner border-2 border-dashed border-gray-300">
-                                    <h3 className="text-2xl font-bold text-center text-gray-700 mb-6">Gráfico: Liderazgo y Crecimiento (Mock)</h3>
-                                    {/* Gráfico/Infografía Placeholder */}
-                                    <div className="w-full h-80 bg-[#FFD700]/20 rounded-xl flex items-center justify-center border-4 border-[#003366]/30">
-                                        <p className="text-4xl font-extrabold text-[#003366]/50">INFOGRAFÍA CLAVE</p>
+                                <div className="bg-gray-100 p-6 rounded-2xl shadow-inner border-2 border-dashed border-gray-300">
+                                    <h3 className="text-2xl font-bold text-center text-gray-700 mb-6">Nuestra Misión — Visual</h3>
+                                    <div className="w-full h-80 rounded-xl overflow-hidden border-4 border-[#003366]/30">
+                                        <img
+                                            src="/photos/mision.png"
+                                            alt="Imagen de la Misión UCB"
+                                            className="w-full h-full object-cover"
+                                        />
                                     </div>
                                 </div>
                             </div>
