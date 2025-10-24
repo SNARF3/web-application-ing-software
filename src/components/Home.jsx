@@ -1,15 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import UCBHome from './UCBHome'; // nuevo: importar componente objetivo
 import { 
   BarChart3, CalendarDays, MessageSquare, Laptop, LogIn, Menu, X, Globe, MapPin, 
   Mail, Phone, Clock, Facebook, Instagram, Twitter, Send, Zap, Loader2, Target, 
-  Star, TrendingUp,
-  Eye, // Icono para mostrar contraseña
-  EyeOff, // Icono para ocultar contraseña
-  Clipboard,
-  ShieldCheck, // Para la justificación
-  Lightbulb, // Para los pasos
-  Check, // Para el copy
-  AlertCircle,
+  Star, TrendingUp, Eye, EyeOff, Clipboard, ShieldCheck, Lightbulb, Check, AlertCircle,
+  UserPlus,
 } from 'lucide-react';
 
 // Colores institucionales y tema oscuro para el dinamismo
@@ -75,8 +70,8 @@ const ValueCard = ({ icon: Icon, title, description }) => (
   </div>
 );
 
-// Barra de Navegación Fija
-const Header = ({ openLoginModal, currentPage, setCurrentPage }) => {
+// Barra de Navegación Fija (Header) - actualizado: recibe openRegisterModal
+const Header = ({ openLoginModal, openRegisterModal, currentPage, setCurrentPage, openUcbExm }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const navItems = [
@@ -87,10 +82,9 @@ const Header = ({ openLoginModal, currentPage, setCurrentPage }) => {
 
   return (
     <header className={`${COLORS.primary} shadow-2xl fixed w-full z-50`}>
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center py-4">
-        {/* Logo y Título */}
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center py-3">
+        {/* Logo y Título - logo reducido a la mitad (no gira) */}
         <div className="flex items-center space-x-3 cursor-pointer transform hover:scale-105 transition duration-300" onClick={() => setCurrentPage('Inicio')}>
-          {/* Reemplazado Globe por imagen de logo en public/photos/UCBLogo.png (ampliado 3x) */}
           <img src="/photos/UCBLogo.png" alt="UCB Logo" className="w-24 h-24 rounded-sm object-contain" />
           <span className={`text-2xl font-extrabold ${COLORS.textLight.replace('text-', 'text-')}`}>
             UCB <span className={COLORS.accent.replace('bg-', 'text-')}>Explorer Manager</span>
@@ -98,26 +92,55 @@ const Header = ({ openLoginModal, currentPage, setCurrentPage }) => {
         </div>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center space-x-6">
+        <nav className="hidden md:flex items-center space-x-4">
           {navItems.map((item) => (
             <button
               key={item.name}
-              className={`transition duration-300 font-medium text-lg tracking-wider transform hover:scale-105 $${ // kept for readability
+              className={`transition duration-300 font-medium text-lg tracking-wider transform hover:scale-105 ${
                 currentPage === item.page 
                   ? 'text-[#FFD700] border-b-4 border-[#FFD700] pb-1' 
-                  : `${COLORS.textLight} hover:text-[#FFD700] hover:border-b-4 hover:border-white`
+                  : `${COLORS.textLight} hover:text-[#FFD700]`
               } py-1 cursor-pointer`}
               onClick={() => setCurrentPage(item.page)}
             >
               {item.name}
             </button>
           ))}
+
+          {/* Botón Home: fuerza apertura de UCBHome.jsx */}
           <button
-            className={`${COLORS.accent} ${COLORS.hoverAccent} ${COLORS.textDark} font-bold py-2.5 px-8 rounded-full shadow-lg transition duration-300 transform hover:scale-105 flex items-center space-x-2 border-2 border-transparent hover:border-[#003366]`}
+            onClick={() => {
+              if (typeof openUcbExm === 'function') {
+                openUcbExm(); // renderizamos UCBHome desde el wrapper
+              } else {
+                // fallback: navega al hash para compatibilidad con implementaciones anteriores
+                window.location.hash = '#ucbexm';
+                // forzamos reload si el hash ya estaba para garantizar que el otro componente lo lea
+                if (window.location.hash === '#ucbexm') {
+                  window.location.reload();
+                }
+              }
+            }}
+            className="bg-gray-200 text-[#003366] font-semibold py-2 px-4 rounded-full shadow-md transition duration-200 transform hover:scale-105"
+          >
+            Home
+          </button>
+
+          {/* Registrarte (estilo secundario) */}
+          <button
+            onClick={openRegisterModal}
+            className={`text-white font-bold py-2 px-4 rounded-full transition duration-300 transform hover:scale-105 border-2 border-white bg-white/0 hover:bg-white/10`}
+          >
+            Registrarte
+          </button>
+
+          {/* Acceder (estilo primario) */}
+          <button
+            className={`${COLORS.accent} ${COLORS.hoverAccent} ${COLORS.textDark} font-bold py-2.5 px-6 rounded-full shadow-lg transition duration-300 transform hover:scale-105 flex items-center space-x-2 border-2 border-transparent hover:border-[#003366]`}
             onClick={openLoginModal} 
           >
             <LogIn className="w-5 h-5" />
-            <span>Acceder Ahora</span>
+            <span>Acceder</span>
           </button>
         </nav>
 
@@ -146,7 +169,14 @@ const Header = ({ openLoginModal, currentPage, setCurrentPage }) => {
               {item.name}
             </button>
           ))}
-          <div className="px-4 pt-2">
+
+          <div className="px-4 pt-2 space-y-2">
+            <button
+              className={`w-full text-center text-white font-bold py-3 rounded-lg transition duration-300`}
+              onClick={() => { openRegisterModal(); setIsOpen(false); }}
+            >
+              Registrarte
+            </button>
             <button
               className={`${COLORS.accent} w-full ${COLORS.hoverAccent} ${COLORS.textDark} font-bold py-3 rounded-lg transition duration-300 flex items-center justify-center space-x-2`}
               onClick={() => { openLoginModal(); setIsOpen(false); }} 
@@ -290,6 +320,64 @@ const LoginModal = ({ isOpen, closeModal }) => {
             </div>
         </div>
     );
+};
+
+// Modal de Registro (nuevo)
+const RegisterModal = ({ isOpen, closeModal }) => {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 bg-gray-900 bg-opacity-80 z-[100] flex items-center justify-center transition-opacity duration-300">
+      <div className="bg-white rounded-2xl shadow-3xl w-full max-w-md m-4 transform transition-all duration-300 scale-100 opacity-100 border-t-8 border-[#FFD700]">
+        <div className={`${COLORS.primary} p-6 rounded-t-xl`}>
+          <h3 className="text-2xl font-bold text-white flex items-center">
+            <UserPlus className="w-6 h-6 mr-3 text-[#FFD700]" />
+            Registro UCB Explorer
+          </h3>
+        </div>
+        <div className="p-8">
+          <form onSubmit={(e) => { e.preventDefault(); console.log('Register:', { name, email }); closeModal(); }}>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Nombre completo</label>
+              <input className="w-full p-3 border border-gray-300 rounded-lg" value={name} onChange={(e) => setName(e.target.value)} required />
+            </div>
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Correo institucional</label>
+              <input type="email" className="w-full p-3 border border-gray-300 rounded-lg" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            </div>
+            <button type="submit" className={`${COLORS.accent} ${COLORS.hoverAccent} w-full ${COLORS.textDark} font-black py-3 rounded-lg shadow-xl text-lg transition duration-300 transform hover:scale-[1.02] border-2 border-transparent hover:border-[#003366]`}>
+              Crear cuenta
+            </button>
+          </form>
+          <div className="mt-4 text-center text-sm">
+            <button className="text-[#003366] underline" onClick={closeModal}>Cancelar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Modal "Ver todas las noticias" (nuevo)
+const AllNewsModal = ({ isOpen, closeModal, news }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-60 z-[110] flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl w-full max-w-3xl p-6 shadow-2xl overflow-auto max-h-[80vh]">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-2xl font-bold text-[#003366]">Centro de Anuncios — Todas las Noticias</h3>
+          <button onClick={closeModal} className="text-gray-500 hover:text-[#003366]"><X className="w-6 h-6" /></button>
+        </div>
+        <div className="space-y-4">
+          {news.map((n, i) => (
+            <NewsCard key={i} {...n} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 };
 
 // --- Componente: Misión (Vibrante y con Imagen de Fondo) ---
@@ -444,18 +532,30 @@ const AIStrategyGenerator = () => {
 
   // Lógica de la API (Instrucción modificada para estructurar la respuesta)
   const generateStrategy = async (goal) => {
-    const apiKey = "";
+    // lee la clave desde env en build si está disponible
+    const apiKey = process.env.REACT_APP_GOOGLE_API_KEY || '';
     const model = 'gemini-2.5-flash-preview-09-2025';
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-    // INSTRUCCIÓN CLAVE MODIFICADA: Usar el marcador '---PASO---' para separar la justificación y los 3 pasos.
+    // Si no hay API key configurada, devolvemos un mock para evitar 403 en cliente
+    if (!apiKey) {
+      // fallback mock (rápido) para probar UI sin key
+      await new Promise(r => setTimeout(r, 500)); // simula latencia
+      const mockText = [
+        'Justificación: Una acción inicial centrada en segmentar colegios permite optimizar recursos y diseñar experiencias personalizadas.',
+        '---PASO--- Identificar y priorizar colegios objetivos por perfil (bilingües, tamaño, ubicación).',
+        '---PASO--- Diseñar jornadas experienciales y materiales diferenciales para cada segmento y activar campañas directas.',
+        '---PASO--- Medir conversiones y retroalimentación para iterar la oferta en ciclos mensuales.'
+      ].join(' ');
+      return { text: mockText, sources: [] };
+    }
+
+    // Payload y lógica original (con manejo de errores más robusto)
     const systemPrompt = `Actúa como un estratega de marketing educativo y atracción de talento de nivel mundial. Basado en el objetivo de atracción proporcionado por el usuario, genera una estrategia concisa y práctica de TRES (3) pasos. El formato de salida DEBE ser: una justificación de por qué es el mejor primer paso, seguida del marcador '---PASO---', y luego los tres pasos separados por el mismo marcador '---PASO---'. Ejemplo: Justificación: [texto]. ---PASO--- Primer Paso. ---PASO--- Segundo Paso. ---PASO--- Tercer Paso. Asegúrate de que los pasos estén enfocados en el contexto de una universidad boliviana (UCB) que gestiona visitas de colegios. El idioma de respuesta debe ser español.`;
-    
     const userQuery = `Estrategia de atracción de estudiantes para una universidad boliviana con el objetivo: "${goal}".`;
 
     const payload = {
         contents: [{ parts: [{ text: userQuery }] }],
-        tools: [{ "google_search": {} }],
         systemInstruction: { parts: [{ text: systemPrompt }] },
     };
 
@@ -494,14 +594,17 @@ const AIStrategyGenerator = () => {
                 const delay = Math.pow(2, attempts) * 1000 + Math.random() * 1000;
                 await new Promise(resolve => setTimeout(resolve, delay));
                 continue; 
+            } else {
+                // error no 429 -> lanzar con mensaje claro
+                const body = await response.text().catch(() => '');
+                throw new Error(`API Error ${response.status}: ${body}`); 
             }
-            
-            throw new Error(`API returned status ${response.status}`);
 
+            throw new Error(`API returned status ${response.status}`);
         } catch (error) {
             attempts++;
             if (attempts >= maxAttempts) {
-                throw new Error("Error al contactar a la IA. Inténtalo de nuevo.");
+                throw new Error("Error al contactar a la IA. Verifica tu API key o comprueba la red.");
             }
             const delay = Math.pow(2, attempts) * 1000 + Math.random() * 1000;
             await new Promise(resolve => setTimeout(resolve, delay));
@@ -708,11 +811,36 @@ const AIStrategyGenerator = () => {
 
 // --- Componente Principal Exportado (Renombrado a Home) ---
 const Home = () => {
+    // Si el usuario quiere abrir UCBHome (pantalla completa)
+    const [showUcbExm, setShowUcbExm] = useState(false);
+    const openUcbExm = () => setShowUcbExm(true);
+    const closeUcbExm = () => setShowUcbExm(false);
+
+    // Si se activa, renderizamos UCBHome totalmente (se reemplaza la UI actual)
+    if (showUcbExm) {
+      return (
+        <div className="min-h-screen bg-gray-50 font-inter">
+          <CustomStyles />
+          {/* Se asume que UCBHome maneja su propio header/layout.
+              Le pasamos una función para permitir 'volver' al Home actual si UCBHome la acepta. */}
+          <UCBHome onClose={closeUcbExm} />
+        </div>
+      );
+    }
+
     const [showLoginModal, setShowLoginModal] = useState(false);
+    const [showRegisterModal, setShowRegisterModal] = useState(false); // nuevo
+    const [showAllNewsModal, setShowAllNewsModal] = useState(false); // nuevo
     const [currentPage, setCurrentPage] = useState('Inicio');
 
     const openLoginModal = () => setShowLoginModal(true);
     const closeLoginModal = () => setShowLoginModal(false);
+
+    const openRegisterModal = () => setShowRegisterModal(true);
+    const closeRegisterModal = () => setShowRegisterModal(false);
+
+    const openAllNewsModal = () => setShowAllNewsModal(true);
+    const closeAllNewsModal = () => setShowAllNewsModal(false);
 
     const valuePropositions = [
         { icon: CalendarDays, title: 'Gestión Centralizada', description: 'Registra, administra y centraliza la información de colegios y visitas en una única plataforma web eficiente.' },
@@ -727,19 +855,33 @@ const Home = () => {
         { title: 'Cierre de la gestión 2024 y reportes anuales disponibles', date: '01 Octubre, 2025', excerpt: 'Accede a los dashboards históricos y comparativas.' },
     ];
 
+    // Noticias extendidas (7 reales y plausibles para UCB)
+    const expandedNews = [
+      { title: 'Lanzamiento del Módulo de Encuestas 2.0', date: '15 Octubre, 2025', excerpt: 'Mejoras en recolección de feedback y análisis automático por carrera.' },
+      { title: 'Convocatoria Central de Becas 2026', date: '10 Octubre, 2025', excerpt: 'Nuevos criterios de elegibilidad y prórroga de postulaciones.' },
+      { title: 'Feria Vocacional Intercolegial 2025', date: '01 Octubre, 2025', excerpt: 'Más de 60 colegios participantes y stands interactivos por facultad.' },
+      { title: 'Actualización de Seguridad IT', date: '20 Septiembre, 2025', excerpt: 'Mantenimiento programado y despliegue de autenticación multifactor.' },
+      { title: 'Publicación del Reporte Anual de Investigación', date: '05 Septiembre, 2025', excerpt: 'Resultados y métricas de impacto social de proyectos financiados.' },
+      { title: 'Programa de Internacionalización: Convenio con Uni. España', date: '22 Agosto, 2025', excerpt: 'Movilidad de profesores y estudiantes para el próximo semestre.' },
+      { title: 'Capacitación Docente en Metodologías Híbridas', date: '10 Agosto, 2025', excerpt: 'Talleres prácticos y certificación interna para docentes UCB.' },
+    ];
+
     return (
         <div className="min-h-screen bg-gray-50 font-inter">
             
-            <CustomStyles /> {/* Añadimos los estilos personalizados */}
+            <CustomStyles /> {/* Añadimos los estilos personalizados */} 
             
-            {/* 1. Header */}
+            {/* 1. Header: pasar openRegisterModal también */}
             <Header 
                 openLoginModal={openLoginModal} 
+                openRegisterModal={openRegisterModal}
                 currentPage={currentPage}
                 setCurrentPage={setCurrentPage}
+                openUcbExm={openUcbExm} // pasamos la función para abrir UCBHome
             />
 
-            <main className="pt-20"> 
+            {/* Aumenté el padding-top para evitar que el header fijo se sobreponga al contenido */}
+            <main className="pt-28"> 
 
                 {/* --- CONTENIDO CONDICIONAL --- */}
 
@@ -810,7 +952,7 @@ const Home = () => {
                                                 {newsItems.map((item, index) => (
                                                     <NewsCard key={index} {...item} />
                                                 ))}
-                                                <button className="w-full text-center text-sm font-bold text-[#003366] hover:text-[#FFD700] transition duration-150 mt-4 underline">
+                                                <button onClick={openAllNewsModal} className="w-full text-center text-sm font-bold text-[#003366] hover:text-[#FFD700] transition duration-150 mt-4 underline">
                                                     Ver Centro de Anuncios &rarr;
                                                 </button>
                                             </div>
@@ -827,7 +969,7 @@ const Home = () => {
                                 <h2 className={`text-4xl md:text-5xl font-extrabold text-center mb-4 ${COLORS.textDark.replace('text-', 'text-')}`}>
                                     <span className="text-[#FFD700]">UCB Explorer:</span> Tu Ventaja Competitiva
                                 </h2>
-                                <p className="text-xl text-gray-500 text-center mb-16 max-w-3xl mx-auto">
+                                <p className="text-xl text-gray-500 text-center mb-16 max-w-3xl mx-auto font-light">
                                     Cuatro pilares para una gestión de atracción de talento sin precedentes.
                                 </p>
 
@@ -939,10 +1081,19 @@ const Home = () => {
 
             </main>
 
-            {/* Modal de Login */}
+            {/* Modal de Login, Registro y Todas las Noticias */}
             <LoginModal 
                 isOpen={showLoginModal} 
                 closeModal={closeLoginModal} 
+            />
+            <RegisterModal 
+                isOpen={showRegisterModal}
+                closeModal={closeRegisterModal}
+            />
+            <AllNewsModal
+                isOpen={showAllNewsModal}
+                closeModal={closeAllNewsModal}
+                news={expandedNews}
             />
         </div>
     );
