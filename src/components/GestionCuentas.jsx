@@ -130,8 +130,15 @@ const GestionCuentas = () => {
       return 'La contraseña y la confirmación de contraseña no coinciden.';
     }
 
-    if (!/\S+@\S+\.\S+/.test(email)) {
+    const emailLower = (email || '').toLowerCase();
+
+    if (!/\S+@\S+\.\S+/.test(emailLower)) {
       return 'El formato del correo electrónico no es válido.';
+    }
+
+    // Validación específica: solo dominio @ucb.edu.bo
+    if (!emailLower.endsWith('@ucb.edu.bo')) {
+      return 'El correo debe pertenecer al dominio @ucb.edu.bo.';
     }
 
     return null; // No hay errores
@@ -165,7 +172,7 @@ const GestionCuentas = () => {
     setSuccess(null);
 
     try {
-      const res = await fetch('http://localhost:3000/register', {
+      const res = await fetch('http://localhost:3000/user/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -273,6 +280,8 @@ const GestionCuentas = () => {
                   value={formData.email}
                   onChange={handleChange}
                   placeholder="ejemplo@ucb.edu.bo"
+                  pattern="^[A-Za-z0-9._%+-]+@ucb\.edu\.bo$"
+                  title="El correo debe ser del dominio @ucb.edu.bo"
                   className={`w-full pl-10 pr-3 p-3 border border-gray-300 rounded-lg focus:ring-4 ${COLORS.focusAccent} focus:border-[#003366] transition duration-150 input-focus-effect`}
                   required
                 />
