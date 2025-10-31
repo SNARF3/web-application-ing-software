@@ -91,6 +91,8 @@ const AdminSidebar = ({ activeModule, setActiveModule, modules, hasLoggedBefore 
     const navigate = useNavigate();
 
     const handleLogout = () => {
+        localStorage.clear();
+        sessionStorage.clear();
         setShowLogoutModal(false);
         navigate('/');
     };
