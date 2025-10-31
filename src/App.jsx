@@ -1,9 +1,19 @@
 import React from 'react';
-import UCBHome from './components/UCBHome.jsx'; // Corregido: importar el Home real
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import UCBHome from './components/UCBHome.jsx';
+import AdminHome from './components/AdminHome.jsx';
+import ColaboradorHome from './components/ColaboradorHome.jsx';
 
-// El componente principal App simplemente renderiza nuestro Home Page.
 const App = () => {
-  return <UCBHome />;
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<UCBHome />} />
+        <Route path="/admin" element={<AdminHome />} />
+        <Route path="/colaborador" element={<ColaboradorHome />} />
+      </Routes>
+    </Router>
+  );
 };
 
 export default App;
