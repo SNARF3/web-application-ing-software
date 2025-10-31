@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-// (UCBHome import removido — Header ahora controla navegación interna a 'Inicio')
+import UCBHome from './UCBHome';
 import { 
   BarChart3, CalendarDays, MessageSquare, Laptop, LogIn, Menu, X, Globe, MapPin, 
   Mail, Phone, Clock, Facebook, Instagram, Twitter, Send, Zap, Loader2, Target, 
@@ -107,9 +107,10 @@ const Header = ({ openLoginModal, openRegisterModal, currentPage, setCurrentPage
             </button>
           ))}
 
-          {/* Botón Home CORREGIDO */}
+          {/* Botón Home */}
           <button
             onClick={() => {
+              window.location.href = '/';
               setCurrentPage('Inicio');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
