@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import UCBHome from './UCBHome';
+import LoginModal from './LoginModal'; // Mantener solo este import
 import { 
   BarChart3, CalendarDays, MessageSquare, Laptop, LogIn, Menu, X, Globe, MapPin, 
   Mail, Phone, Clock, Facebook, Instagram, Twitter, Send, Zap, Loader2, Target, 
@@ -229,95 +230,6 @@ const NewsCard = ({ title, date, excerpt }) => (
         </div>
     </div>
 );
-
-// Modal de Acceso Estilizada
-const LoginModal = ({ isOpen, closeModal }) => {
-    // ESTADO para el toggle de contraseña
-    const [showPassword, setShowPassword] = useState(false);
-
-    if (!isOpen) return null;
-
-    return (
-        <div className="fixed inset-0 bg-gray-900 bg-opacity-80 z-[100] flex items-center justify-center transition-opacity duration-300">
-            <div className="bg-white rounded-2xl shadow-3xl w-full max-w-md m-4 transform transition-all duration-300 scale-100 opacity-100 border-t-8 border-[#FFD700]">
-                
-                <div className={`${COLORS.primary} p-6 rounded-t-xl flex justify-between items-center`}>
-                    <h3 className="text-2xl font-bold text-white flex items-center">
-                        <LogIn className="w-6 h-6 mr-3 text-[#FFD700] animate-pulse" />
-                        Acceso UCB Explorer
-                    </h3>
-                    <button
-                        onClick={closeModal}
-                        className="text-white hover:text-[#FFD700] transition duration-200 p-1 rounded-full hover:bg-[#004488]"
-                    >
-                        <X className="w-6 h-6" />
-                    </button>
-                </div>
-                
-                <div className="p-8">
-                    <p className="text-gray-600 mb-6 text-center font-semibold">
-                        Inicia sesión con tus credenciales UCB.
-                    </p>
-                    
-                    <form onSubmit={(e) => { e.preventDefault(); console.log('Login Attempt via Modal'); closeModal(); }}>
-                        <div className="mb-4">
-                            <label htmlFor="modal-email" className="block text-sm font-medium text-gray-700 mb-1">
-                                Correo Institucional
-                            </label>
-                            <input
-                                type="email"
-                                id="modal-email"
-                                placeholder="ejemplo@ucb.edu.bo"
-                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-4 focus:ring-[#FFD700]/50 focus:border-[#003366] transition duration-150 shadow-sm"
-                                required
-                            />
-                        </div>
-                        <div className="mb-6">
-                            <label htmlFor="modal-password" className="block text-sm font-medium text-gray-700 mb-1">
-                                Contraseña
-                            </label>
-                            
-                            {/* Contenedor para el campo de contraseña con toggle */}
-                            <div className="relative">
-                                <input
-                                    type={showPassword ? 'text' : 'password'} // Toggles type based on state
-                                    id="modal-password"
-                                    placeholder="••••••••"
-                                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-4 focus:ring-[#FFD700]/50 focus:border-[#003366] transition duration-150 shadow-sm pr-10"
-                                    required
-                                />
-                                <button
-                                    type="button" // Previene el envío del formulario
-                                    onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-[#003366] transition duration-150"
-                                    aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                                >
-                                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                                </button>
-                            </div>
-                            
-                        </div>
-                        
-                        <button
-                            type="submit"
-                            className={`${COLORS.accent} ${COLORS.hoverAccent} w-full ${COLORS.textDark} font-black py-3 rounded-lg shadow-xl text-lg transition duration-300 transform hover:scale-[1.02] border-2 border-transparent hover:border-[#003366]`}
-                            onClick={() => { console.log('Login Attempt'); closeModal(); }}
-                        >
-                            ¡A Acceder!
-                        </button>
-                    </form>
-                    
-                    <div className="mt-6 text-center text-sm">
-                        <a href="#" className={`text-[#003366] hover:text-[#FFD700] font-medium transition duration-150 underline`} onClick={() => console.log('Forgot Password')}>
-                            ¿Problemas para iniciar sesión?
-                        </a>
-                    </div>
-                </div>
-
-            </div>
-        </div>
-    );
-};
 
 // Modal de Registro (nuevo)
 const RegisterModal = ({ isOpen, closeModal }) => {
@@ -808,274 +720,275 @@ const AIStrategyGenerator = () => {
 
 // --- Componente Principal Exportado (Home) CORREGIDO ---
 const Home = () => {
-    const [showLoginModal, setShowLoginModal] = useState(false);
-    const [showRegisterModal, setShowRegisterModal] = useState(false);
-    const [showAllNewsModal, setShowAllNewsModal] = useState(false);
-    const [currentPage, setCurrentPage] = useState('Inicio');
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [showAllNewsModal, setShowAllNewsModal] = useState(false);
+  const [currentPage, setCurrentPage] = useState('Inicio');
  
-     const openLoginModal = () => setShowLoginModal(true);
-     const closeLoginModal = () => setShowLoginModal(false);
+   const openLoginModal = () => setShowLoginModal(true);
+   const closeLoginModal = () => setShowLoginModal(false);
  
-     const openRegisterModal = () => setShowRegisterModal(true);
-     const closeRegisterModal = () => setShowRegisterModal(false);
+   const openRegisterModal = () => setShowRegisterModal(true);
+   const closeRegisterModal = () => setShowRegisterModal(false);
  
-     const openAllNewsModal = () => setShowAllNewsModal(true);
-     const closeAllNewsModal = () => setShowAllNewsModal(false);
+   const openAllNewsModal = () => setShowAllNewsModal(true);
+   const closeAllNewsModal = () => setShowAllNewsModal(false);
  
-    const valuePropositions = [
-        { icon: CalendarDays, title: 'Gestión Centralizada', description: 'Registra, administra y centraliza la información de colegios y visitas en una única plataforma web eficiente.' },
-        { icon: BarChart3, title: 'Análisis de Impacto', description: 'Genera reportes y dashboards para optimizar la planificación y mejorar la toma de decisiones basada en datos.' },
-        { icon: MessageSquare, title: 'Feedback Estudiantil', description: 'Captura y analiza la retroalimentación obtenida de los estudiantes visitantes para mejorar su experiencia en los recorridos.' },
-        { icon: Laptop, title: 'Interfaz Intuitiva', description: 'Diseñada con una experiencia de usuario (UX) fluida y accesible para todos los perfiles, facilitando su adopción.' },
-    ];
+  const valuePropositions = [
+      { icon: CalendarDays, title: 'Gestión Centralizada', description: 'Registra, administra y centraliza la información de colegios y visitas en una única plataforma web eficiente.' },
+      { icon: BarChart3, title: 'Análisis de Impacto', description: 'Genera reportes y dashboards para optimizar la planificación y mejorar la toma de decisiones basada en datos.' },
+      { icon: MessageSquare, title: 'Feedback Estudiantil', description: 'Captura y analiza la retroalimentación obtenida de los estudiantes visitantes para mejorar su experiencia en los recorridos.' },
+      { icon: Laptop, title: 'Interfaz Intuitiva', description: 'Diseñada con una experiencia de usuario (UX) fluida y accesible para todos los perfiles, facilitando su adopción.' },
+  ];
 
-    const newsItems = [
-        { title: 'Nueva funcionalidad: Módulo de Encuestas 2.0', date: '15 Octubre, 2025', excerpt: 'Mejoras significativas en la recolección de feedback post-visita.' },
-        { title: 'Actualización de seguridad programada para la próxima semana', date: '10 Octubre, 2025', excerpt: 'Revisa las notas de la versión para los detalles.' },
-        { title: 'Cierre de la gestión 2024 y reportes anuales disponibles', date: '01 Octubre, 2025', excerpt: 'Accede a los dashboards históricos y comparativas.' },
-    ];
+  const newsItems = [
+      { title: 'Nueva funcionalidad: Módulo de Encuestas 2.0', date: '15 Octubre, 2025', excerpt: 'Mejoras significativas en la recolección de feedback post-visita.' },
+      { title: 'Actualización de seguridad programada para la próxima semana', date: '10 Octubre, 2025', excerpt: 'Revisa las notas de la versión para los detalles.' },
+      { title: 'Cierre de la gestión 2024 y reportes anuales disponibles', date: '01 Octubre, 2025', excerpt: 'Accede a los dashboards históricos y comparativas.' },
+  ];
 
-    // Noticias extendidas (7 reales y plausibles para UCB)
-    const expandedNews = [
-      { title: 'Lanzamiento del Módulo de Encuestas 2.0', date: '15 Octubre, 2025', excerpt: 'Mejoras en recolección de feedback y análisis automático por carrera.' },
-      { title: 'Convocatoria Central de Becas 2026', date: '10 Octubre, 2025', excerpt: 'Nuevos criterios de elegibilidad y prórroga de postulaciones.' },
-      { title: 'Feria Vocacional Intercolegial 2025', date: '01 Octubre, 2025', excerpt: 'Más de 60 colegios participantes y stands interactivos por facultad.' },
-      { title: 'Actualización de Seguridad IT', date: '20 Septiembre, 2025', excerpt: 'Mantenimiento programado y despliegue de autenticación multifactor.' },
-      { title: 'Publicación del Reporte Anual de Investigación', date: '05 Septiembre, 2025', excerpt: 'Resultados y métricas de impacto social de proyectos financiados.' },
-      { title: 'Programa de Internacionalización: Convenio con Uni. España', date: '22 Agosto, 2025', excerpt: 'Movilidad de profesores y estudiantes para el próximo semestre.' },
-      { title: 'Capacitación Docente en Metodologías Híbridas', date: '10 Agosto, 2025', excerpt: 'Talleres prácticos y certificación interna para docentes UCB.' },
-    ];
+  // Noticias extendidas (7 reales y plausibles para UCB)
+  const expandedNews = [
+    { title: 'Lanzamiento del Módulo de Encuestas 2.0', date: '15 Octubre, 2025', excerpt: 'Mejoras en recolección de feedback y análisis automático por carrera.' },
+    { title: 'Convocatoria Central de Becas 2026', date: '10 Octubre, 2025', excerpt: 'Nuevos criterios de elegibilidad y prórroga de postulaciones.' },
+    { title: 'Feria Vocacional Intercolegial 2025', date: '01 Octubre, 2025', excerpt: 'Más de 60 colegios participantes y stands interactivos por facultad.' },
+    { title: 'Actualización de Seguridad IT', date: '20 Septiembre, 2025', excerpt: 'Mantenimiento programado y despliegue de autenticación multifactor.' },
+    { title: 'Publicación del Reporte Anual de Investigación', date: '05 Septiembre, 2025', excerpt: 'Resultados y métricas de impacto social de proyectos financiados.' },
+    { title: 'Programa de Internacionalización: Convenio con Uni. España', date: '22 Agosto, 2025', excerpt: 'Movilidad de profesores y estudiantes para el próximo semestre.' },
+    { title: 'Capacitación Docente en Metodologías Híbridas', date: '10 Agosto, 2025', excerpt: 'Talleres prácticos y certificación interna para docentes UCB.' },
+  ];
 
-    return (
-        <div className="min-h-screen bg-gray-50 font-inter">
-            
-            <CustomStyles /> {/* Añadimos los estilos personalizados */} 
-            
-            {/* 1. Header: pasar openRegisterModal también */}
-            <Header 
-                openLoginModal={openLoginModal} 
-                openRegisterModal={openRegisterModal}
-                currentPage={currentPage}
-                setCurrentPage={setCurrentPage}
-            />
+  return (
+    <div className="min-h-screen bg-gray-50 font-inter">
+      <CustomStyles />
 
-            {/* Aumenté el padding-top para evitar que el header fijo se sobreponga al contenido */}
-            <main className="pt-28"> 
+      <Header 
+        openLoginModal={() => setShowLoginModal(true)} 
+        openRegisterModal={() => setShowRegisterModal(true)}
+        currentPage={currentPage}
+        setCurrentPage={setCurrentPage}
+      />
 
-                {/* --- CONTENIDO CONDICIONAL --- */}
+      <main className="pt-28">
+        {/* --- CONTENIDO CONDICIONAL --- */}
 
-                {currentPage === 'Inicio' && (
-                    <React.Fragment>
-                        {/* 2. CONTENIDO PRINCIPAL: Hero con Video de Fondo Local */}
-                        <section className="bg-white">
-                            <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-10">
-                                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                                    
-                                    <div className="lg:col-span-8">
-                                        <div className="relative min-h-[580px] flex flex-col items-center justify-center overflow-hidden rounded-2xl shadow-3xl card-dynamic-hover transition duration-500">
-                                            
-                                            {/* Contenedor del Video Local */}
-                                            <div className="absolute inset-0 w-full h-full z-0">
-                                                <div className="relative w-full h-full">
-                                                    {/* Video local desde public/videos/ */}
-                                                    <video 
-                                                        autoPlay 
-                                                        muted 
-                                                        loop 
-                                                        playsInline
-                                                        className="absolute top-0 left-0 w-full h-full object-cover scale-105"
-                                                    >
-                                                        <source src="/videos/UCBCampus.mp4" type="video/mp4" />
-                                                        Tu navegador no soporta el elemento de video.
-                                                    </video>
-                                                    
-                                                    {/* Capas de overlay para mejor legibilidad */}
-                                                    <div className="absolute inset-0 bg-gradient-to-r from-[#003366]/80 to-[#003366]/60"></div>
-                                                    <div className="absolute inset-0 bg-black/30"></div>
-                                                </div>
-                                            </div>
-
-                                            {/* Contenido sobre el video */}
-                                            <div className="p-8 text-center relative z-10 w-full max-w-4xl mx-auto">
-                                                <h1 className="text-6xl md:text-7xl font-black mb-4 leading-tight text-white drop-shadow-2xl animate-fadeIn">
-                                                    UCB <span className='text-[#FFD700]'>EXPLORER</span>
-                                                </h1>
-
-                                                <p className="text-xl md:text-2xl mb-12 max-w-3xl mx-auto text-gray-100 font-light italic bg-black/20 backdrop-blur-sm p-4 rounded-lg">
-                                                    Donde los datos de visitas se transforman en <strong>estrategias de crecimiento</strong> efectivo.
-                                                </p>
-
-                                                <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-12 pt-4 border-t border-gray-300/50 mt-4">
-                                                    <AnimatedCounter endValue={380} label="Colegios Activos" />
-                                                    <AnimatedCounter endValue={5500} label="Futuros Líderes Impactados" />
-                                                </div>
-                                                
-                                                <button
-                                                    className={`mt-10 ${COLORS.accent} ${COLORS.hoverAccent} ${COLORS.textDark} font-black py-3.5 px-10 rounded-full shadow-2xl text-xl transition duration-300 transform hover:scale-[1.05] border-2 border-transparent hover:border-[#003366] hover:shadow-3xl`}
-                                                    onClick={() => console.log('Explorar Dashboard')}
-                                                >
-                                                    Ir al Dashboard
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Columna Lateral (Novedades) */}
-                                    <div className="lg:col-span-4 p-4 lg:p-0">
-                                        <div className="bg-gray-100 p-6 rounded-2xl border border-gray-200 sticky top-24 shadow-xl">
-                                            <h2 className={`text-2xl font-bold mb-5 ${COLORS.textDark.replace('text-', 'text-')} flex items-center border-b pb-3`}>
-                                                <Clock className="w-5 h-5 mr-3 text-[#FFD700] animate-spin-slow" />
-                                                Lo Más Reciente
-                                            </h2>
-                                            <div className="space-y-4">
-                                                {newsItems.map((item, index) => (
-                                                    <NewsCard key={index} {...item} />
-                                                ))}
-                                                <button onClick={openAllNewsModal} className="w-full text-center text-sm font-bold text-[#003366] hover:text-[#FFD700] transition duration-150 mt-4 underline">
-                                                    Ver Centro de Anuncios &rarr;
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                </div>
-                            </div>
-                        </section>
-
-                        {/* 3. SECCIÓN PROPOSICIÓN DE VALOR (FEATURES) */}
-                        <section id="features" className="py-20 bg-gray-50">
-                            <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                                <h2 className={`text-4xl md:text-5xl font-extrabold text-center mb-4 ${COLORS.textDark.replace('text-', 'text-')}`}>
-                                    <span className="text-[#FFD700]">UCB Explorer:</span> Tu Ventaja Competitiva
-                                </h2>
-                                <p className="text-xl text-gray-500 text-center mb-16 max-w-3xl mx-auto font-light">
-                                    Cuatro pilares para una gestión de atracción de talento sin precedentes.
-                                </p>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                                    {valuePropositions.map((prop) => (
-                                        <ValueCard key={prop.title} {...prop} />
-                                    ))}
-                                </div>
-                            </div>
-                        </section>
-
-                        {/* 4. SECCIÓN: Generador de Estrategias con IA */}
-                        <AIStrategyGenerator />
-                    </React.Fragment>
-                )}
-
-                {/* 5. SECCIÓN MISIÓN (Dinámica y con Background) */}
-                {currentPage === 'Misión' && <MissionSection />}
-                
-                {/* 6. SECCIÓN VISIÓN (Enfoque Futurista) */}
-                {currentPage === 'Visión' && <VisionSection />}
-
-                {/* 7. FOOTER */}
-                <footer className={`${COLORS.primary} text-white pt-12 pb-6`}>
-                    <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-10 border-b border-gray-700 pb-8 mb-6">
+        {currentPage === 'Inicio' && (
+            <React.Fragment>
+                {/* 2. CONTENIDO PRINCIPAL: Hero con Video de Fondo Local */}
+                <section className="bg-white">
+                    <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-10">
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                             
-                            {/* Columna 1: Información de Contacto */}
-                            <div>
-                                <h4 className="text-xl font-bold mb-4 text-[#FFD700]">Contáctanos</h4>
-                                <div className="space-y-3 text-sm text-gray-300">
-                                    <div className="flex items-start transition duration-200 hover:text-[#FFD700]">
-                                        <MapPin className="w-5 h-5 mr-3 flex-shrink-0 mt-1" />
-                                        <p>Av. 14 de Septiembre Nº 4807 esq. calle 2 de Obrajes</p>
+                            <div className="lg:col-span-8">
+                                <div className="relative min-h-[580px] flex flex-col items-center justify-center overflow-hidden rounded-2xl shadow-3xl card-dynamic-hover transition duration-500">
+                                    
+                                    {/* Contenedor del Video Local */}
+                                    <div className="absolute inset-0 w-full h-full z-0">
+                                        <div className="relative w-full h-full">
+                                            {/* Video local desde public/videos/ */}
+                                            <video 
+                                                autoPlay 
+                                                muted 
+                                                loop 
+                                                playsInline
+                                                className="absolute top-0 left-0 w-full h-full object-cover scale-105"
+                                            >
+                                                <source src="/videos/UCBCampus.mp4" type="video/mp4" />
+                                                Tu navegador no soporta el elemento de video.
+                                            </video>
+                                            
+                                            {/* Capas de overlay para mejor legibilidad */}
+                                            <div className="absolute inset-0 bg-gradient-to-r from-[#003366]/80 to-[#003366]/60"></div>
+                                            <div className="absolute inset-0 bg-black/30"></div>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center transition duration-200 hover:text-[#FFD700]">
-                                        <Phone className="w-5 h-5 mr-3 flex-shrink-0" />
-                                        <p>+ 591 (2) 2782222</p>
-                                    </div>
-                                    <div className="flex items-center transition duration-200 hover:text-[#FFD700]">
-                                        <Mail className="w-5 h-5 mr-3 flex-shrink-0" />
-                                        <p>informaciones@ucb.edu.bo</p>
+
+                                    {/* Contenido sobre el video */}
+                                    <div className="p-8 text-center relative z-10 w-full max-w-4xl mx-auto">
+                                        <h1 className="text-6xl md:text-7xl font-black mb-4 leading-tight text-white drop-shadow-2xl animate-fadeIn">
+                                            UCB <span className='text-[#FFD700]'>EXPLORER</span>
+                                        </h1>
+
+                                        <p className="text-xl md:text-2xl mb-12 max-w-3xl mx-auto text-gray-100 font-light italic bg-black/20 backdrop-blur-sm p-4 rounded-lg">
+                                            Donde los datos de visitas se transforman en <strong>estrategias de crecimiento</strong> efectivo.
+                                        </p>
+
+                                        <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-12 pt-4 border-t border-gray-300/50 mt-4">
+                                            <AnimatedCounter endValue={380} label="Colegios Activos" />
+                                            <AnimatedCounter endValue={5500} label="Futuros Líderes Impactados" />
+                                        </div>
+                                        
+                                        <button
+                                            className={`mt-10 ${COLORS.accent} ${COLORS.hoverAccent} ${COLORS.textDark} font-black py-3.5 px-10 rounded-full shadow-2xl text-xl transition duration-300 transform hover:scale-[1.05] border-2 border-transparent hover:border-[#003366] hover:shadow-3xl`}
+                                            onClick={() => console.log('Explorar Dashboard')}
+                                        >
+                                            Ir al Dashboard
+                                        </button>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Columna 2: Redes Sociales */}
-                            <div className="flex flex-col items-center justify-center text-center space-y-4">
-                                <p className="text-2xl font-extrabold text-[#FFD700]">#UCBExplorer</p>
-                                <div className="flex space-x-6">
-                                    <a href="https://www.facebook.com/UCB.BOLIVIA/?locale=es_LA" target="_blank" rel="noopener noreferrer" aria-label="UCB Facebook" className="p-3 rounded-full bg-gray-700 hover:bg-[#FFD700] transition duration-300 transform hover:scale-110 shadow-lg">
-                                        <Facebook className="w-6 h-6 text-white hover:text-[#003366]" />
-                                    </a>
-                                    <a href="https://api.whatsapp.com/send?phone=59175851671&text=%C2%A1Hola!%20tengo%20una%20consulta." target="_blank" rel="noopener noreferrer" aria-label="WhatsApp UCB" className="p-3 rounded-full bg-gray-700 hover:bg-[#25D366] transition duration-300 transform hover:scale-110 shadow-lg">
-                                        <Phone className="w-6 h-6 text-white" />
-                                    </a>
-                                    <a href="https://www.instagram.com/ucb.lapaz/" target="_blank" rel="noopener noreferrer" aria-label="UCB Instagram" className="p-3 rounded-full bg-gray-700 hover:bg-[#FFD700] transition duration-300 transform hover:scale-110 shadow-lg">
-                                        <Instagram className="w-6 h-6 text-white hover:text-[#003366]" />
-                                    </a>
-                                </div>
-
-                                {/* Mini-mapa en recuadro que abre Google Maps al hacer clic */}
-                                <div className="mt-4 w-full flex justify-center">
-                                  <a href="https://maps.app.goo.gl/99wGAuNZWeH23qi87" target="_blank" rel="noopener noreferrer" className="block rounded-lg overflow-hidden shadow-md max-w-xs w-full">
-                                    <div className="relative">
-                                      <iframe
-                                        title="UCB La Paz - Mini Map"
-                                        src="https://www.google.com/maps?q=Universidad%20Catolica%20Boliviana%20San%20Pablo%20Sede%20La%20Paz&output=embed"
-                                        className="w-full h-28"
-                                        loading="lazy"
-                                      ></iframe>
-                                      <div className="text-center text-xs text-gray-300 bg-[#003366] py-2">Universidad Católica Boliviana — Abrir en Google Maps</div>
+                            {/* Columna Lateral (Novedades) */}
+                            <div className="lg:col-span-4 p-4 lg:p-0">
+                                <div className="bg-gray-100 p-6 rounded-2xl border border-gray-200 sticky top-24 shadow-xl">
+                                    <h2 className={`text-2xl font-bold mb-5 ${COLORS.textDark.replace('text-', 'text-')} flex items-center border-b pb-3`}>
+                                        <Clock className="w-5 h-5 mr-3 text-[#FFD700] animate-spin-slow" />
+                                        Lo Más Reciente
+                                    </h2>
+                                    <div className="space-y-4">
+                                        {newsItems.map((item, index) => (
+                                            <NewsCard key={index} {...item} />
+                                        ))}
+                                        <button onClick={openAllNewsModal} className="w-full text-center text-sm font-bold text-[#003366] hover:text-[#FFD700] transition duration-150 mt-4 underline">
+                                            Ver Centro de Anuncios &rarr;
+                                        </button>
                                     </div>
-                                  </a>
                                 </div>
                             </div>
 
-                            {/* Columna 3: Suscripción */}
-                            <div className="md:text-right">
-                                <h4 className="text-xl font-bold mb-4 text-[#FFD700]">Únete a la Vanguardia</h4>
-                                <p className="text-sm text-gray-300 mb-4">
-                                    Suscríbete para recibir noticias y ultimas novedades.
-                                </p>
-                                <form onSubmit={(e) => { e.preventDefault(); console.log('Subscription Attempt'); }} className="flex md:justify-end">
-                                    <input
-                                        type="email"
-                                        placeholder="Tu email..."
-                                        className="p-3 rounded-l-lg border-none text-gray-800 w-full max-w-xs focus:outline-none focus:ring-2 focus:ring-[#FFD700]"
-                                        required
-                                    />
-                                    <button
-                                        type="submit"
-                                        className={`bg-[#FFD700] hover:bg-[#E0B800] text-[#003366] font-bold p-3 rounded-r-lg transition duration-200 flex items-center justify-center transform hover:translate-x-1`}
-                                    >
-                                        <Send className="w-5 h-5" />
-                                    </button>
-                                </form>
-                            </div>
-
-                        </div>
-                        
-                        {/* Copyright Final */}
-                        <div className="text-center text-sm text-gray-400 pt-4">
-                            <p>© {new Date().getFullYear()} UCB Explorer Manager. Desarrollado por BACK4END</p>
                         </div>
                     </div>
-                </footer>
+                </section>
 
-            </main>
+                {/* 3. SECCIÓN PROPOSICIÓN DE VALOR (FEATURES) */}
+                <section id="features" className="py-20 bg-gray-50">
+                    <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+                        <h2 className={`text-4xl md:text-5xl font-extrabold text-center mb-4 ${COLORS.textDark.replace('text-', 'text-')}`}>
+                            <span className="text-[#FFD700]">UCB Explorer:</span> Tu Ventaja Competitiva
+                        </h2>
+                        <p className="text-xl text-gray-500 text-center mb-16 max-w-3xl mx-auto font-light">
+                            Cuatro pilares para una gestión de atracción de talento sin precedentes.
+                        </p>
 
-            {/* Modal de Login, Registro y Todas las Noticias */}
-            <LoginModal 
-                isOpen={showLoginModal} 
-                closeModal={closeLoginModal} 
-            />
-            <RegisterModal 
-                isOpen={showRegisterModal}
-                closeModal={closeRegisterModal}
-            />
-            <AllNewsModal
-                isOpen={showAllNewsModal}
-                closeModal={closeAllNewsModal}
-                news={expandedNews}
-            />
-        </div>
-    );
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                            {valuePropositions.map((prop) => (
+                                <ValueCard key={prop.title} {...prop} />
+                            ))}
+                        </div>
+                    </div>
+                </section>
+
+                {/* 4. SECCIÓN: Generador de Estrategias con IA */}
+                <AIStrategyGenerator />
+            </React.Fragment>
+        )}
+
+        {/* 5. SECCIÓN MISIÓN (Dinámica y con Background) */}
+        {currentPage === 'Misión' && <MissionSection />}
+        
+        {/* 6. SECCIÓN VISIÓN (Enfoque Futurista) */}
+        {currentPage === 'Visión' && <VisionSection />}
+
+        {/* 7. FOOTER */}
+        <footer className={`${COLORS.primary} text-white pt-12 pb-6`}>
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-10 border-b border-gray-700 pb-8 mb-6">
+                    
+                    {/* Columna 1: Información de Contacto */}
+                    <div>
+                        <h4 className="text-xl font-bold mb-4 text-[#FFD700]">Contáctanos</h4>
+                        <div className="space-y-3 text-sm text-gray-300">
+                            <div className="flex items-start transition duration-200 hover:text-[#FFD700]">
+                                <MapPin className="w-5 h-5 mr-3 flex-shrink-0 mt-1" />
+                                <p>Av. 14 de Septiembre Nº 4807 esq. calle 2 de Obrajes</p>
+                            </div>
+                            <div className="flex items-center transition duration-200 hover:text-[#FFD700]">
+                                <Phone className="w-5 h-5 mr-3 flex-shrink-0" />
+                                <p>+ 591 (2) 2782222</p>
+                            </div>
+                            <div className="flex items-center transition duration-200 hover:text-[#FFD700]">
+                                <Mail className="w-5 h-5 mr-3 flex-shrink-0" />
+                                <p>informaciones@ucb.edu.bo</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Columna 2: Redes Sociales */}
+                    <div className="flex flex-col items-center justify-center text-center space-y-4">
+                        <p className="text-2xl font-extrabold text-[#FFD700]">#UCBExplorer</p>
+                        <div className="flex space-x-6">
+                            <a href="https://www.facebook.com/UCB.BOLIVIA/?locale=es_LA" target="_blank" rel="noopener noreferrer" aria-label="UCB Facebook" className="p-3 rounded-full bg-gray-700 hover:bg-[#FFD700] transition duration-300 transform hover:scale-110 shadow-lg">
+                                <Facebook className="w-6 h-6 text-white hover:text-[#003366]" />
+                            </a>
+                            <a href="https://api.whatsapp.com/send?phone=59175851671&text=%C2%A1Hola!%20tengo%20una%20consulta." target="_blank" rel="noopener noreferrer" aria-label="WhatsApp UCB" className="p-3 rounded-full bg-gray-700 hover:bg-[#25D366] transition duration-300 transform hover:scale-110 shadow-lg">
+                                <Phone className="w-6 h-6 text-white" />
+                            </a>
+                            <a href="https://www.instagram.com/ucb.lapaz/" target="_blank" rel="noopener noreferrer" aria-label="UCB Instagram" className="p-3 rounded-full bg-gray-700 hover:bg-[#FFD700] transition duration-300 transform hover:scale-110 shadow-lg">
+                                <Instagram className="w-6 h-6 text-white hover:text-[#003366]" />
+                            </a>
+                        </div>
+
+                        {/* Mini-mapa en recuadro que abre Google Maps al hacer clic */}
+                        <div className="mt-4 w-full flex justify-center">
+                          <a href="https://maps.app.goo.gl/99wGAuNZWeH23qi87" target="_blank" rel="noopener noreferrer" className="block rounded-lg overflow-hidden shadow-md max-w-xs w-full">
+                            <div className="relative">
+                              <iframe
+                                title="UCB La Paz - Mini Map"
+                                src="https://www.google.com/maps?q=Universidad%20Catolica%20Boliviana%20San%20Pablo%20Sede%20La%20Paz&output=embed"
+                                className="w-full h-28"
+                                loading="lazy"
+                              ></iframe>
+                              <div className="text-center text-xs text-gray-300 bg-[#003366] py-2">Universidad Católica Boliviana — Abrir en Google Maps</div>
+                            </div>
+                          </a>
+                        </div>
+                    </div>
+
+                    {/* Columna 3: Suscripción */}
+                    <div className="md:text-right">
+                        <h4 className="text-xl font-bold mb-4 text-[#FFD700]">Únete a la Vanguardia</h4>
+                        <p className="text-sm text-gray-300 mb-4">
+                            Suscríbete para recibir noticias y ultimas novedades.
+                        </p>
+                        <form onSubmit={(e) => { e.preventDefault(); console.log('Subscription Attempt'); }} className="flex md:justify-end">
+                            <input
+                                type="email"
+                                placeholder="Tu email..."
+                                className="p-3 rounded-l-lg border-none text-gray-800 w-full max-w-xs focus:outline-none focus:ring-2 focus:ring-[#FFD700]"
+                                required
+                            />
+                            <button
+                                type="submit"
+                                className={`bg-[#FFD700] hover:bg-[#E0B800] text-[#003366] font-bold p-3 rounded-r-lg transition duration-200 flex items-center justify-center transform hover:translate-x-1`}
+                            >
+                                <Send className="w-5 h-5" />
+                            </button>
+                        </form>
+                    </div>
+
+                </div>
+                
+                {/* Copyright Final */}
+                <div className="text-center text-sm text-gray-400 pt-4">
+                    <p>© {new Date().getFullYear()} UCB Explorer Manager. Desarrollado por BACK4END</p>
+                </div>
+            </div>
+        </footer>
+
+      </main>
+
+      {/* Modal de Login, Registro y Todas las Noticias */}
+      <LoginModal 
+        isOpen={showLoginModal}
+        closeModal={() => setShowLoginModal(false)}
+        onLoginSuccess={(userData) => {
+          console.log('Login successful:', userData);
+          setShowLoginModal(false);
+        }}
+      />
+
+      <RegisterModal 
+        isOpen={showRegisterModal}
+        closeModal={() => setShowRegisterModal(false)}
+      />
+      <AllNewsModal
+        isOpen={showAllNewsModal}
+        closeModal={() => setShowAllNewsModal(false)}
+        news={expandedNews}
+      />
+    </div>
+  );
 };
 
 export default Home;
