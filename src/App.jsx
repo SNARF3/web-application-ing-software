@@ -13,6 +13,8 @@ const App = () => {
         <Route path="/UCB-Explorer-Manager" element={<Home />} />
         <Route path="/admin" element={<AdminHome />} />
         <Route path="/colaborador" element={<ColaboradorHome />} />
+        {/* Ruta por defecto */}
+        <Route path="*" element={<UCBHome />} />
       </Routes>
     </Router>
   );

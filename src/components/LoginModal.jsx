@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { LogIn, Eye, EyeOff, X, Mail, Shield, CheckCircle } from 'lucide-react';
 
 const COLORS = {
@@ -11,6 +12,7 @@ const COLORS = {
 };
 
 const LoginModal = ({ isOpen, closeModal, onLoginSuccess }) => {
+  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -81,20 +83,56 @@ const LoginModal = ({ isOpen, closeModal, onLoginSuccess }) => {
 
       const data = await response.json();
 
+      console.log('🔍 RESPUESTA COMPLETA DEL BACKEND:', data);
+      console.log('🔍 DATOS DEL USUARIO:', data.usuario);
+      
+      if (data.usuario) {
+        console.log('🔍 PROPIEDADES DEL USUARIO:', Object.keys(data.usuario));
+        console.log('🔍 VALOR DE rol:', data.usuario.rol);
+      }
+
       if (data.success) {
-        // Guardar token en sessionStorage
+        // Guardar token y datos del usuario en sessionStorage
         sessionStorage.setItem('token', data.token);
         sessionStorage.setItem('user', JSON.stringify(data.usuario));
+        
+        console.log('💾 Token guardado');
+        console.log('💾 Usuario guardado:', data.usuario);
         
         // Mostrar pantalla de éxito
         setShowSuccess(true);
         
-        // Esperar 2 segundos y luego cerrar
+        // Esperar 2 segundos y luego redirigir según el rol
         setTimeout(() => {
           closeModal();
+          
+          console.log('🎯 INICIANDO REDIRECCIÓN...');
+          console.log('🎯 Datos del usuario:', data.usuario);
+          console.log('🎯 rol value:', data.usuario.rol);
+          
+          // REDIRECCIÓN SEGÚN ROL - USANDO EL CAMPO "rol" (STRING)
+          let redirectPath = '/UCB-Explorer-Manager'; // Ruta por defecto
+          
+          // Verificar usando rol (string)
+          if (data.usuario.rol === 'Administrador' || data.usuario.rol === 'Admin') {
+            console.log('🚀 REDIRIGIENDO A ADMIN - rol = Administrador');
+            redirectPath = '/admin';
+          } else if (data.usuario.rol === 'Docente' || data.usuario.rol === 'Colaborador' || data.usuario.rol === 'Profesor') {
+            console.log('🚀 REDIRIGIENDO A COLABORADOR - rol =', data.usuario.rol);
+            redirectPath = '/colaborador';
+          } else {
+            console.log('⚠️ Rol no reconocido:', data.usuario.rol);
+          }
+          
+          console.log('📍 Ruta final de redirección:', redirectPath);
+          
+          // Redirigir
+          navigate(redirectPath);
+          
           if (onLoginSuccess) {
             onLoginSuccess(data.usuario);
           }
+          
           // Resetear estados para próxima vez
           setShowSuccess(false);
           setShowVerification(false);
