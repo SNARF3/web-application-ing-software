@@ -140,7 +140,7 @@ const GestionContrasenas = () => {
         return null; 
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         const validationError = validateForm();
 
@@ -149,22 +149,64 @@ const GestionContrasenas = () => {
             return;
         }
 
-        // Simulación de Llamada API
+        // Obtener token de sessionStorage
+        const token = sessionStorage.getItem("token");
+        if (!token) {
+            setMessage({ type: 'error', text: 'No hay sesión activa. Por favor inicie sesión nuevamente.' });
+            return;
+        }
+
         setMessage({ type: 'info', text: 'Procesando cambio de contraseña...' });
-        
-        setTimeout(() => {
-            // Simular una respuesta exitosa del servidor
+
+        try {
+            const response = await fetch('http://localhost:3000/user/change-password', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    contrasenia_actual: formData.currentPassword,
+                    nueva_contrasenia: formData.newPassword
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Error al cambiar la contraseña');
+            }
+
+            // Éxito
             setMessage({ 
                 type: 'success', 
-                text: '¡Contraseña actualizada con éxito! Por favor, mantenga su cuenta segura.' 
+                text: 'Contraseña actualizada con éxito! Por favor, mantenga su cuenta segura.' 
             });
+            // Enviar log tipo 5 (Cambio de contraseña) usando endpoint bulk
+            (async () => {
+                try {
+                    await fetch('http://localhost:3000/logs/bulk', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ tipo_log: 5 }),
+                    });
+                } catch (err) {
+                    console.error('Error enviando log de cambio de contraseña:', err);
+                }
+            })();
             // Resetear formulario
             setFormData({
                 currentPassword: '',
                 newPassword: '',
                 confirmNewPassword: '',
             });
-        }, 1500); // Espera de 1.5 segundos
+
+        } catch (error) {
+            setMessage({ 
+                type: 'error', 
+                text: error.message || 'Error al procesar la solicitud'
+            });
+        }
     };
 
 

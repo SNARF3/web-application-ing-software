@@ -5,7 +5,6 @@ import {
   ShieldCheck, Award, TrendingDown, Layers, Laptop, School, Eye, EyeOff, Loader2,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom'; // Importar useNavigate
-import Home from './Home.jsx';
 import LoginModal from './LoginModal';
 
 // Colores institucionales y tema oscuro para el dinamismo
