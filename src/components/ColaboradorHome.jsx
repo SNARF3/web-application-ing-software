@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Menu, X, LogOut, User, Users, CalendarCheck, School, BarChart3, 
   Mail, MessageSquare, Award, Clock, Settings, TrendingUp, Zap, ThumbsUp,
@@ -191,6 +191,58 @@ const ModuleCard = ({ icon: Icon, title, description, delay, onClick }) => (
 // --- Componente Principal (ColaboradorHome) ---
 const ColaboradorHome = () => {
     const [activeModule, setActiveModule] = useState('Dashboard'); // Módulo inicial
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        let mounted = true;
+        const controller = new AbortController();
+
+        const token = sessionStorage.getItem('token');
+        if (!token) {
+            // Sin token -> enviar a login (ruta raíz)
+            navigate('/');
+            return () => controller.abort();
+        }
+
+        (async () => {
+            try {
+                const res = await fetch('http://localhost:3000/user/has-logged-before', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    signal: controller.signal,
+                });
+
+                if (!mounted) return;
+
+                if (!res.ok) {
+                    console.error('has-logged-before error:', res.status, await res.text());
+                    return;
+                }
+
+                const data = await res.json().catch(() => null);
+                let hasLoggedBefore = false;
+                if (typeof data === 'boolean') hasLoggedBefore = data;
+                else if (data && typeof data.hasLoggedBefore === 'boolean') hasLoggedBefore = data.hasLoggedBefore;
+                else if (data && typeof data.value === 'boolean') hasLoggedBefore = data.value;
+                else if (data === 'true' || data === 'false') hasLoggedBefore = data === 'true';
+
+                if (!hasLoggedBefore) {
+                    // Forzar vista de cambio de contraseña
+                    setActiveModule('Administración de Contraseñas');
+                }
+                // si es true, mantener flujo normal
+            } catch (err) {
+                if (err.name !== 'AbortError') console.error('fetch has-logged-before failed:', err);
+            }
+        })();
+
+        return () => {
+            mounted = false;
+            controller.abort();
+        };
+    }, [navigate]);
 
     // Definición de todos los módulos con sus iconos
     const modules = [
