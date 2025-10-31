@@ -116,6 +116,77 @@ const LoginModal = ({ isOpen, closeModal, onLoginSuccess }) => {
         console.log('✅ Código enviado al correo:', data.message);
       } else {
         setError(data.message || 'Error al iniciar sesión');
+        // Registrar intento fallido de inicio de sesión (registro individual)
+        try {
+          // Contador de intentos por correo (localStorage para persistir entre recargas)
+          const key = `failed_login_${(email || '').toLowerCase()}`;
+          let count = parseInt(localStorage.getItem(key) || '0', 10) || 0;
+          count += 1;
+          localStorage.setItem(key, String(count));
+
+          // Enviar log de intento fallido
+          // El backend requiere id_usuario; si no hay usuario autenticado usamos 0
+          const userStr_local = sessionStorage.getItem('user');
+          let userObj_local = null;
+          try { userObj_local = userStr_local ? JSON.parse(userStr_local) : null; } catch (e) { userObj_local = null; }
+          const payload = {
+            tipo_log: 3,
+            // Usar null cuando no hay usuario autenticado para evitar claves foráneas inválidas en BD
+            id_usuario: userObj_local ? (userObj_local.id || userObj_local.id_usuario || userObj_local.ID || null) : null,
+            correo_intento: email,
+            intentos: count,
+            fechahora: new Date().toISOString(),
+          };
+          console.debug('Enviando log (intento fallido):', payload);
+          const res = await fetch('http://localhost:3000/logs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          if (!res.ok) {
+            try {
+              const body = await res.json();
+              console.error('Log API responded with', res.status, body);
+            } catch (e) {
+              const text = await res.text().catch(() => '');
+              console.error('Log API responded with', res.status, text);
+            }
+          }
+
+          // Si se alcanzan 3 intentos fallidos seguidos, registrar intento de acceso no autorizado (tipo 4)
+          if (count >= 3) {
+            try {
+              const payload2 = {
+                tipo_log: 4,
+                id_usuario: userObj_local ? (userObj_local.id || userObj_local.id_usuario || userObj_local.ID || null) : null,
+                correo_intento: email,
+                detalle: '3_intentos_fallidos',
+                fechahora: new Date().toISOString(),
+              };
+              console.debug('Enviando log (acceso no autorizado - 3 intentos):', payload2);
+              const res2 = await fetch('http://localhost:3000/logs', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload2),
+              });
+              if (!res2.ok) {
+                try {
+                  const body2 = await res2.json();
+                  console.error('Log API responded with', res2.status, body2);
+                } catch (e2) {
+                  const text2 = await res2.text().catch(() => '');
+                  console.error('Log API responded with', res2.status, text2);
+                }
+              }
+            } catch (err2) {
+              console.error('Error al registrar log de acceso no autorizado tras 3 intentos:', err2);
+            }
+            // Resetear contador para evitar múltiples logs tipo 4 por el mismo bloqueo
+            localStorage.removeItem(key);
+          }
+        } catch (logError) {
+          console.error('Error al registrar log de inicio fallido:', logError);
+        }
       }
     } catch (error) {
       console.error('Error en login:', error);
@@ -160,11 +231,11 @@ const LoginModal = ({ isOpen, closeModal, onLoginSuccess }) => {
         console.log('💾 Token guardado');
         console.log('💾 Usuario guardado:', data.usuario);
         
-        // Mostrar pantalla de éxito
+  // Mostrar pantalla de éxito
         setShowSuccess(true);
         
         // Esperar 2 segundos y luego redirigir según el rol
-        setTimeout(() => {
+        setTimeout(async () => {
           closeModal();
           
           console.log('🎯 INICIANDO REDIRECCIÓN...');
@@ -187,6 +258,47 @@ const LoginModal = ({ isOpen, closeModal, onLoginSuccess }) => {
           
           console.log('📍 Ruta final de redirección:', redirectPath);
           
+          // Registrar log de inicio de sesión exitoso (registro individual con datos de usuario)
+          try {
+            const userStr = sessionStorage.getItem('user');
+            let userObj = null;
+            try { userObj = userStr ? JSON.parse(userStr) : null; } catch (e) { userObj = null; }
+            const token = sessionStorage.getItem('token');
+            const payload = { tipo_log: 1, fechahora: new Date().toISOString() };
+            // Asegurar id_usuario (requerido por backend)
+            payload.id_usuario = userObj ? (userObj.id || userObj.id_usuario || userObj.ID || null) : null;
+            if (userObj) {
+              payload.nombre_usuario = userObj.nombre || userObj.nombre_usuario || userObj.correo || '';
+              payload.apellido_usuario = userObj.apellido || userObj.apellido_usuario || '';
+              payload.nombre_rol = userObj.rol || userObj.nombre_rol || '';
+            }
+            console.debug('Enviando log (login exitoso):', payload);
+            const resLog = await fetch('http://localhost:3000/logs', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+              },
+              body: JSON.stringify(payload),
+            });
+            if (!resLog.ok) {
+              try {
+                const bodyLog = await resLog.json();
+                console.error('Log API responded with', resLog.status, bodyLog);
+              } catch (e) {
+                const txt = await resLog.text().catch(() => '');
+                console.error('Log API responded with', resLog.status, txt);
+              }
+            }
+            // Al inicio exitoso, limpiar contador de intentos fallidos para este correo
+            try {
+              const failKey = `failed_login_${(email || '').toLowerCase()}`;
+              localStorage.removeItem(failKey);
+            } catch (_) { /* ignore */ }
+          } catch (logError) {
+            console.error('Error al registrar log de inicio exitoso:', logError);
+          }
+
           // Redirigir
           navigate(redirectPath);
           
