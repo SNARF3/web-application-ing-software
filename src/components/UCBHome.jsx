@@ -60,7 +60,7 @@ const CustomStyles = () => (
 
 // 1. Barra de Navegación Fija (Header)
 // Modificado para recibir openLoginModal, openRegisterModal y openUcbExm
-const Header = ({ scrollToSection, openLoginModal, openRegisterModal, openUcbExm }) => {
+const Header = ({ scrollToSection, openLoginModal, openRegisterModal, openUcbExm, isAuthenticated, onLogout }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const navItems = [
@@ -123,13 +123,23 @@ const Header = ({ scrollToSection, openLoginModal, openRegisterModal, openUcbExm
             <UserPlus className="w-5 h-5" />
             <span>Regístrate</span>
           </button>
-          <button
-            className={`${COLORS.accent} ${COLORS.hoverAccent} ${COLORS.textDark} font-bold py-2.5 px-6 rounded-full shadow-lg transition duration-300 transform hover:scale-105 flex items-center space-x-2 border-2 border-transparent hover:border-[#003366]`}
-            onClick={openLoginModal}
-          >
-            <LogIn className="w-5 h-5" />
-            <span>Log In</span>
-          </button>
+          {!isAuthenticated ? (
+            <button
+              className={`${COLORS.accent} ${COLORS.hoverAccent} ${COLORS.textDark} font-bold py-2.5 px-6 rounded-full shadow-lg transition duration-300 transform hover:scale-105 flex items-center space-x-2 border-2 border-transparent hover:border-[#003366]`}
+              onClick={openLoginModal}
+            >
+              <LogIn className="w-5 h-5" />
+              <span>Log In</span>
+            </button>
+          ) : (
+            <button
+              className={`bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-6 rounded-full shadow-lg transition duration-300 transform hover:scale-105 flex items-center space-x-2`}
+              onClick={onLogout}
+            >
+              <X className="w-5 h-5" />
+              <span>Cerrar sesión</span>
+            </button>
+          )}
         </nav>
 
         {/* Mobile Menu Button */}
@@ -165,13 +175,23 @@ const Header = ({ scrollToSection, openLoginModal, openRegisterModal, openUcbExm
                 <UserPlus className="w-5 h-5" />
                 <span>Regístrate</span>
               </button>
-            <button
-              className={`${COLORS.accent} w-full ${COLORS.hoverAccent} ${COLORS.textDark} font-bold py-3 rounded-lg transition duration-300 flex items-center justify-center space-x-2`}
-              onClick={() => { openLoginModal(); setIsOpen(false); }} 
-            >
-              <LogIn className="w-5 h-5" />
-              <span>Log In</span>
-            </button>
+            {!isAuthenticated ? (
+              <button
+                className={`${COLORS.accent} w-full ${COLORS.hoverAccent} ${COLORS.textDark} font-bold py-3 rounded-lg transition duration-300 flex items-center justify-center space-x-2`}
+                onClick={() => { openLoginModal(); setIsOpen(false); }} 
+              >
+                <LogIn className="w-5 h-5" />
+                <span>Log In</span>
+              </button>
+            ) : (
+              <button
+                className={`bg-red-600 w-full text-white font-bold py-3 rounded-lg transition duration-300 flex items-center justify-center space-x-2`}
+                onClick={() => { onLogout(); setIsOpen(false); }}
+              >
+                <X className="w-5 h-5" />
+                <span>Cerrar sesión</span>
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -389,9 +409,66 @@ const Footer = () => (
 
 // === NUEVOS/MODIFICADOS: Modales (Login, Register, AllNews) ===
 
-const LoginModal = ({ isOpen, closeModal }) => {
+const LoginModal = ({ isOpen, closeModal, onLogin }) => {
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [attempts, setAttempts] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
   if (!isOpen) return null;
+
+  // Helper: llamar al endpoint bulk para insertar logs para todos los usuarios
+  const sendBulkLog = async (tipo_log) => {
+    try {
+      await fetch('http://localhost:3000/logs/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tipo_log }),
+      });
+    } catch (err) {
+      console.error('Error enviando log bulk:', err);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+
+    // Simulación simple de autenticación:
+    // - Si la contraseña tiene menos de 4 caracteres -> fallo (tipo 3)
+    // - Si la contraseña es 'admin' -> éxito
+    await new Promise(r => setTimeout(r, 700));
+
+    if (password.length < 4) {
+      // intento fallido
+      setAttempts(a => {
+        const next = a + 1;
+        // enviar tipo 3 (inicio fallido)
+        sendBulkLog(3);
+        if (next >= 3) {
+          // demasiados intentos fallidos -> tipo 4
+          sendBulkLog(4);
+        }
+        return next;
+      });
+      setError('Credenciales incorrectas. Intenta de nuevo.');
+      setLoading(false);
+      return;
+    }
+
+    // Éxito de login (simulado)
+    // Enviar log tipo 1
+    await sendBulkLog(1);
+    setAttempts(0);
+    setLoading(false);
+    // Avisar al padre
+    if (onLogin) onLogin({ email });
+    closeModal();
+  };
+
   return (
     <div className="fixed inset-0 bg-gray-900 bg-opacity-80 z-[100] flex items-center justify-center">
       <div className="bg-white rounded-2xl w-full max-w-md p-0 shadow-2xl border-t-8 border-[#FFD700]">
@@ -405,17 +482,20 @@ const LoginModal = ({ isOpen, closeModal }) => {
           </button>
         </div>
         <div className="p-6">
-          <form onSubmit={(e) => { e.preventDefault(); console.log('Login attempt'); closeModal(); }}>
+          <form onSubmit={handleSubmit}>
             <label className="block text-sm font-medium text-gray-700 mb-1">Correo institucional</label>
-            <input type="email" required className="w-full p-3 border border-gray-300 rounded-lg mb-4" placeholder="ejemplo@ucb.edu.bo" />
+            <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" required className="w-full p-3 border border-gray-300 rounded-lg mb-4" placeholder="ejemplo@ucb.edu.bo" />
             <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
             <div className="relative mb-4">
-              <input type={showPassword ? 'text' : 'password'} required className="w-full p-3 border border-gray-300 rounded-lg pr-10" placeholder="••••••••" />
+              <input value={password} onChange={(e) => setPassword(e.target.value)} type={showPassword ? 'text' : 'password'} required className="w-full p-3 border border-gray-300 rounded-lg pr-10" placeholder="••••••••" />
               <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400">
                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
             </div>
-            <button type="submit" className={`${COLORS.accent} ${COLORS.hoverAccent} w-full ${COLORS.textDark} font-black py-3 rounded-lg shadow-xl`}>Acceder</button>
+
+            {error && <div className="text-sm text-red-600 mb-3">{error}</div>}
+
+            <button disabled={loading} type="submit" className={`${COLORS.accent} ${COLORS.hoverAccent} w-full ${COLORS.textDark} font-black py-3 rounded-lg shadow-xl`}>{loading ? 'Procesando...' : 'Acceder'}</button>
           </form>
           <div className="mt-4 text-center text-sm">
             <button onClick={() => { console.log('Forgot password'); }} className="text-[#003366] underline">¿Problemas para iniciar sesión?</button>
@@ -486,10 +566,14 @@ const UCBHome = () => {
        setShowUCBExM(true);
      };
  
-     // modales
-     const [showLoginModal, setShowLoginModal] = useState(false);
+  // modales
+  const [showLoginModal, setShowLoginModal] = useState(false);
      const [showRegisterModal, setShowRegisterModal] = useState(false);
      const [showAllNewsModal, setShowAllNewsModal] = useState(false);
+
+  // Estado de autenticación (simulado)
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [currentUserEmail, setCurrentUserEmail] = useState(null);
 
     const openLoginModal = () => setShowLoginModal(true);
     const closeLoginModal = () => setShowLoginModal(false);
@@ -497,6 +581,32 @@ const UCBHome = () => {
     const closeRegisterModal = () => setShowRegisterModal(false);
     const openAllNewsModal = () => setShowAllNewsModal(true);
     const closeAllNewsModal = () => setShowAllNewsModal(false);
+
+    // Enviar bulk log helper
+    const sendBulkLog = async (tipo_log) => {
+      try {
+        await fetch('http://localhost:3000/logs/bulk', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tipo_log }),
+        });
+      } catch (err) {
+        console.error('Error enviando bulk log:', err);
+      }
+    };
+
+    const handleLogin = async ({ email }) => {
+      setIsAuthenticated(true);
+      setCurrentUserEmail(email);
+      // El LoginModal ya envía tipo 1, pero por seguridad podemos volver a enviar o no. Aquí no lo reenviamos.
+    };
+
+    const handleLogout = async () => {
+      // Enviar tipo 2 (cierre de sesión manual)
+      await sendBulkLog(2);
+      setIsAuthenticated(false);
+      setCurrentUserEmail(null);
+    };
 
     const scrollToSection = (id) => {
         const element = document.getElementById(id);
@@ -560,7 +670,7 @@ const UCBHome = () => {
             <CustomStyles />
             
             {/* 1. Header (Encabezado y Navegación) */}
-            <Header scrollToSection={scrollToSection} openLoginModal={openLoginModal} openRegisterModal={openRegisterModal} openUcbExm={openUcbExm} />
+            <Header scrollToSection={scrollToSection} openLoginModal={openLoginModal} openRegisterModal={openRegisterModal} openUcbExm={openUcbExm} isAuthenticated={isAuthenticated} onLogout={handleLogout} />
 
             <main className="pt-20"> 
 
@@ -737,7 +847,7 @@ const UCBHome = () => {
             </main>
 
             {/* Modales */}
-            <LoginModal isOpen={showLoginModal} closeModal={closeLoginModal} />
+            <LoginModal isOpen={showLoginModal} closeModal={closeLoginModal} onLogin={handleLogin} />
             <RegisterModal isOpen={showRegisterModal} closeModal={closeRegisterModal} />
             <AllNewsModal isOpen={showAllNewsModal} closeModal={closeAllNewsModal} news={expandedNews} />
         </div>
