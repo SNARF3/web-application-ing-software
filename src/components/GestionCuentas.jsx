@@ -106,11 +106,11 @@ const GestionCuentas = () => {
   const [success, setSuccess] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false); // <-- agregado
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    // Limpiar errores o éxitos al escribir
     setError(null);
     setSuccess(null);
   };
@@ -137,7 +137,8 @@ const GestionCuentas = () => {
     return null; // No hay errores
   };
 
-  const handleSubmit = (e) => {
+  // --- Cambiado: ahora realiza POST a la API de registro ---
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const validationError = validateForm();
 
@@ -147,22 +148,62 @@ const GestionCuentas = () => {
       return;
     }
 
-    // Lógica de registro simulada
-    console.log('Usuario a Registrar:', formData);
-    
-    // Simulación de éxito
-    setSuccess(`Usuario '${formData.email}' registrado como ${ROLES.find(r => r.id === formData.role)?.name}.`);
+    // Mapear role string a id_rol numérico requerido por la API
+    const roleMap = { admin: 1, collaborator: 2 };
+    const id_rol = roleMap[formData.role] ?? 2; // por defecto 2 (colaborador)
+
+    const payload = {
+      nombre: formData.firstName,
+      apellido: formData.lastName,
+      correo: formData.email,
+      contrasenia: formData.password,
+      id_rol,
+    };
+
+    setLoading(true);
     setError(null);
-    
-    // Resetear formulario
-    setFormData({
+    setSuccess(null);
+
+    try {
+      const res = await fetch('http://localhost:3000/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        // intentar obtener mensaje de error del body
+        let errMsg = `Error ${res.status} - ${res.statusText}`;
+        try {
+          const errJson = await res.json();
+          if (errJson && (errJson.message || errJson.error)) {
+            errMsg = errJson.message || errJson.error;
+          }
+        } catch (_) { /* ignore JSON parse errors */ }
+        setError(errMsg);
+        setSuccess(null);
+        return;
+      }
+
+      const data = await res.json().catch(() => ({}));
+      setSuccess(data.message || `Usuario '${formData.email}' registrado como ${ROLES.find(r => r.id === formData.role)?.name}.`);
+      setError(null);
+
+      // Resetear formulario
+      setFormData({
         firstName: '',
         lastName: '',
         email: '',
         password: '',
         confirmPassword: '',
         role: ROLES[0].id,
-    });
+      });
+    } catch (err) {
+      setError(err.message || 'Error de red al conectar con la API.');
+      setSuccess(null);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -310,10 +351,11 @@ const GestionCuentas = () => {
             {/* Botón de Registro */}
             <button
               type="submit"
-              className={`w-full ${COLORS.primary} ${COLORS.hoverPrimary} ${COLORS.textLight} font-bold py-3 rounded-xl shadow-md transition duration-300 transform hover:scale-[1.01] flex items-center justify-center text-lg mt-6`}
+              disabled={loading}
+              className={`w-full ${COLORS.primary} ${COLORS.hoverPrimary} ${COLORS.textLight} font-bold py-3 rounded-xl shadow-md transition duration-300 transform hover:scale-[1.01] flex items-center justify-center text-lg mt-6 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
               <UserPlus className="w-5 h-5 mr-3" />
-              Registrar Cuenta de Usuario
+              {loading ? 'Enviando...' : 'Registrar Cuenta de Usuario'}
             </button>
           </form>
         </div>
