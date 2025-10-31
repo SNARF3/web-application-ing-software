@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import UCBHome from './components/UCBHome.jsx';
 import AdminHome from './components/AdminHome.jsx';
+import Home from './components/Home.jsx';
 import ColaboradorHome from './components/ColaboradorHome.jsx';
 
 const App = () => {
@@ -9,6 +10,7 @@ const App = () => {
     <Router>
       <Routes>
         <Route path="/" element={<UCBHome />} />
+        <Route path="/UCB-Explorer-Manager" element={<Home />} />
         <Route path="/admin" element={<AdminHome />} />
         <Route path="/colaborador" element={<ColaboradorHome />} />
       </Routes>
