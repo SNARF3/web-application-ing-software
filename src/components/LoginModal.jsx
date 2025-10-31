@@ -246,7 +246,7 @@ const LoginModal = ({ isOpen, closeModal, onLoginSuccess }) => {
           let redirectPath = '/UCB-Explorer-Manager'; // Ruta por defecto
           
           // Verificar usando rol (string)
-          if (data.usuario.rol === 'Administrador' || data.usuario.rol === 'Admin') {
+          if (data.usuario.rol === 'Admin' || data.usuario.rol === 'Admin') {
             console.log('🚀 REDIRIGIENDO A ADMIN - rol = Administrador');
             redirectPath = '/admin';
           } else if (data.usuario.rol === 'Docente' || data.usuario.rol === 'Colaborador' || data.usuario.rol === 'Profesor') {
