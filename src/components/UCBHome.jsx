@@ -148,7 +148,7 @@ const Header = ({ scrollToSection, openLoginModal, openRegisterModal, openUcbExp
             alt="Logo UCB" 
             className="w-24 h-24 object-contain" 
           />
-          <span className={`text-2xl font-extrabold ${COLORS.textLight.replace('text-', 'text-')}`}>
+          <span className={`text-2xl font-extrabold whitespace-nowrap ${COLORS.textLight.replace('text-', 'text-')}`}>
             UNIVERSIDAD CATÓLICA <span className={COLORS.accent.replace('bg-', 'text-')}>SAN PABLO</span>
           </span>
         </div>
@@ -176,22 +176,6 @@ const Header = ({ scrollToSection, openLoginModal, openRegisterModal, openUcbExp
             className="bg-gray-200 text-[#003366] font-bold py-2 px-4 rounded-full shadow-md transition duration-200 transform hover:scale-105 mr-2 hover:bg-[#FFD700] hover:text-[#003366] border-2 border-transparent hover:border-[#003366]"
           >
             UCB-Explorer Manager
-          </button>
-
-          {/* Enlaces de Acción (Regístrate / Log In) - ahora funcionales */}
-          <button
-            className={`bg-white hover:bg-gray-200 ${COLORS.textDark} font-bold py-2.5 px-6 rounded-full shadow-lg transition duration-300 transform hover:scale-105 flex items-center space-x-2`}
-            onClick={openRegisterModal}
-          >
-            <UserPlus className="w-5 h-5" />
-            <span>Regístrate</span>
-          </button>
-          <button
-            className={`${COLORS.accent} ${COLORS.hoverAccent} ${COLORS.textDark} font-bold py-2.5 px-6 rounded-full shadow-lg transition duration-300 transform hover:scale-105 flex items-center space-x-2 border-2 border-transparent hover:border-[#003366]`}
-            onClick={openLoginModal}
-          >
-            <LogIn className="w-5 h-5" />
-            <span>Log In</span>
           </button>
         </nav>
 
@@ -229,22 +213,7 @@ const Header = ({ scrollToSection, openLoginModal, openRegisterModal, openUcbExp
               UCB-Explorer Manager
             </button>
           </div>
-          <div className="px-4 pt-4 space-y-3">
-             <button
-                className={`bg-white w-full hover:bg-gray-200 ${COLORS.textDark} font-bold py-3 rounded-lg transition duration-300 flex items-center justify-center space-x-2`}
-                onClick={() => { openRegisterModal(); setIsOpen(false); }} 
-              >
-                <UserPlus className="w-5 h-5" />
-                <span>Regístrate</span>
-              </button>
-            <button
-              className={`${COLORS.accent} w-full ${COLORS.hoverAccent} ${COLORS.textDark} font-bold py-3 rounded-lg transition duration-300 flex items-center justify-center space-x-2`}
-              onClick={() => { openLoginModal(); setIsOpen(false); }} 
-            >
-              <LogIn className="w-5 h-5" />
-              <span>Log In</span>
-            </button>
-          </div>
+          {/* Botones de registro y login eliminados en mobile */}
         </div>
       )}
     </header>
