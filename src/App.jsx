@@ -4,15 +4,35 @@ import UCBHome from './components/UCBHome.jsx';
 import AdminHome from './components/AdminHome.jsx';
 import Home from './components/Home.jsx';
 import ColaboradorHome from './components/ColaboradorHome.jsx';
+import ProtectedRoute from './components/ProtectedRoute.jsx';
 
 const App = () => {
   return (
     <Router>
       <Routes>
+        {/* Rutas públicas */}
         <Route path="/" element={<UCBHome />} />
         <Route path="/UCB-Explorer-Manager" element={<Home />} />
-        <Route path="/admin" element={<AdminHome />} />
-        <Route path="/colaborador" element={<ColaboradorHome />} />
+        
+        {/* Rutas protegidas por autenticación */}
+        <Route 
+          path="/admin" 
+          element={
+            <ProtectedRoute requiredRole="admin">
+              <AdminHome />
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="/colaborador" 
+          element={
+            <ProtectedRoute requiredRole="colaborador">
+              <ColaboradorHome />
+            </ProtectedRoute>
+          } 
+        />
+        
         {/* Ruta por defecto */}
         <Route path="*" element={<UCBHome />} />
       </Routes>
