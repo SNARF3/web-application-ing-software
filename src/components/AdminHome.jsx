@@ -90,7 +90,42 @@ const AdminSidebar = ({ activeModule, setActiveModule, modules, hasLoggedBefore 
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const navigate = useNavigate();
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
+        // Before clearing session, get user info for the log
+        const userStr = sessionStorage.getItem('user');
+        const token = sessionStorage.getItem('token');
+        let userObj = null;
+        try { 
+            userObj = userStr ? JSON.parse(userStr) : null; 
+        } catch (e) { 
+            userObj = null; 
+        }
+
+        // Log the logout action
+        try {
+            const payload = { 
+                tipo_log: 2, // Tipo 2 para cierre de sesión
+                fechahora: new Date().toISOString(),
+                id_usuario: userObj ? (userObj.id || userObj.id_usuario || userObj.ID || null) : null
+            };
+            if (userObj) {
+                payload.nombre_usuario = userObj.nombre || userObj.nombre_usuario || userObj.correo || '';
+                payload.apellido_usuario = userObj.apellido || userObj.apellido_usuario || '';
+                payload.nombre_rol = userObj.rol || userObj.nombre_rol || '';
+            }
+            await fetch('http://localhost:3000/logs', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { Authorization: `Bearer ${token}` } : {})
+                },
+                body: JSON.stringify(payload)
+            });
+        } catch (error) {
+            console.error('Error al registrar log de cierre de sesión:', error);
+        }
+
+        // Clear session and redirect
         localStorage.clear();
         sessionStorage.clear();
         setShowLogoutModal(false);

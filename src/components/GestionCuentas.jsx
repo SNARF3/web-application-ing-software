@@ -37,13 +37,15 @@ const LOG_TYPES = {
   1: { text: 'Inicio de sesión exitoso', status: 'success', Icon: LogIn },
   2: { text: 'Cierre de sesión manual', status: 'info', Icon: Bell },
   3: { text: 'Inicio de sesión fallido', status: 'warning', Icon: AlertCircle },
-  4: { text: 'Intento de acceso no autorizado', status: 'error', Icon: TrendingDown },
-  5: { text: 'Registro de nuevo usuario o paciente', status: 'success', Icon: UserPlus },
+  4: { text: 'Varios intentos fallidos', status: 'error', Icon: TrendingDown },
+  5: { text: 'Cambio de contraseña', status: 'success', Icon: LockKeyhole },
   6: { text: 'Actualización de datos', status: 'info', Icon: Check },
   7: { text: 'Eliminación de registro', status: 'error', Icon: TrendingDown },
-  8: { text: 'Medición registrada', status: 'success', Icon: CheckCircle },
+  8: { text: 'Acceso a módulo restringido', status: 'warning', Icon: Shield },
   9: { text: 'Visualización de reportes', status: 'info', Icon: Clock },
-  10: { text: 'Cambio de contraseña', status: 'info', Icon: LockKeyhole },
+  10: { text: 'Cambio de contraseña exitoso', status: 'success', Icon: LockKeyhole },
+  11: { text: 'Restablecimiento de contraseña', status: 'warning', Icon: Lock },
+  12: { text: 'Bloqueo de cuenta', status: 'error', Icon: Shield },
 };
 
 // --- Estilos CSS Personalizados para Animaciones ---
