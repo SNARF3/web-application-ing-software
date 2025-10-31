@@ -4,7 +4,9 @@ import {
   LogIn, UserPlus, Zap, CheckCircle, TrendingUp, BookOpen, Star, MessageCircle, 
   ShieldCheck, Award, TrendingDown, Layers, Laptop, School, Eye, EyeOff, Loader2,
 } from 'lucide-react';
-import Home from './Home.jsx'; // Nuevo: componente al que navegar desde la pestaña UCBExM
+import { useNavigate } from 'react-router-dom'; // Importar useNavigate
+import Home from './Home.jsx';
+import LoginModal from './LoginModal';
 
 // Colores institucionales y tema oscuro para el dinamismo
 const COLORS = {
@@ -15,6 +17,70 @@ const COLORS = {
   hoverPrimary: 'hover:bg-[#004488]',
   hoverAccent: 'hover:bg-[#E0B800]',
 };
+
+// Datos de ejemplo para las secciones
+const academicServices = [
+  {
+    icon: BookOpen,
+    title: 'Pregrado',
+    description: 'Carreras profesionales de alta calidad con enfoque humanista y tecnológico.'
+  },
+  {
+    icon: Award,
+    title: 'Postgrado',
+    description: 'Maestrías y especializaciones para tu desarrollo profesional continuo.'
+  },
+  {
+    icon: Laptop,
+    title: 'Educación Virtual',
+    description: 'Modalidades flexibles adaptadas a tus necesidades y horarios.'
+  }
+];
+
+const competitiveAdvantages = [
+  {
+    icon: ShieldCheck,
+    title: 'Calidad Académica',
+    description: 'Acreditación nacional e internacional que garantiza excelencia educativa.',
+    delay: 0
+  },
+  {
+    icon: TrendingUp,
+    title: 'Alta Empleabilidad',
+    description: 'Nuestros graduados tienen una de las tasas más altas de inserción laboral.',
+    delay: 0.2
+  },
+  {
+    icon: Globe,
+    title: 'Internacionalización',
+    description: 'Convenios con universidades de todo el mundo para intercambios estudiantiles.',
+    delay: 0.4
+  },
+  {
+    icon: Layers,
+    title: 'Infraestructura',
+    description: 'Laboratorios y bibliotecas de última generación para tu formación.',
+    delay: 0.6
+  }
+];
+
+const newsItems = [
+  {
+    title: 'Nuevo Programa de Ingeniería en IA',
+    date: '15 Nov 2024',
+    excerpt: 'La UCB lanza su nueva carrera en Inteligencia Artificial para el semestre 2025.'
+  },
+  {
+    title: 'Convenio con Universidad de España',
+    date: '10 Nov 2024',
+    excerpt: 'Firmamos nuevo acuerdo de intercambio estudiantil con prestigiosa universidad europea.'
+  },
+  {
+    title: 'Jornadas de Puertas Abiertas',
+    date: '5 Nov 2024',
+    excerpt: 'Ven y conoce nuestras instalaciones este sábado 25 de noviembre.'
+  }
+];
 
 // --- Estilos CSS Personalizados para Animaciones ---
 const CustomStyles = () => (
@@ -55,7 +121,6 @@ const CustomStyles = () => (
     </style>
 );
 
-
 // --- Componentes Reutilizables ---
 
 // 1. Barra de Navegación Fija (Header)
@@ -79,7 +144,6 @@ const Header = ({ scrollToSection, openLoginModal, openRegisterModal, openUcbExm
             className="flex items-center space-x-3 cursor-pointer transform hover:scale-105 transition duration-300" 
             onClick={() => scrollToSection('hero')}
         >
-          {/* Logo aumentado 2x y SIN animación de giro */}
           <img 
             src="/photos/UCBLogo.png" 
             alt="Logo UCB" 
@@ -107,12 +171,12 @@ const Header = ({ scrollToSection, openLoginModal, openRegisterModal, openUcbExm
               {item.name}
             </button>
           ))}
-          {/* Botón moderno gris para lanzar UCBExM (pantalla completa) */}
+          {/* Botón moderno gris para lanzar UCB-Explorer Manager */}
           <button
-            onClick={openUcbExm}
-            className="bg-gray-200 text-[#003366] font-bold py-2 px-5 rounded-full shadow-md transition duration-200 transform hover:scale-105 mr-2"
+            onClick={openUcbExplorerManager}
+            className="bg-gray-200 text-[#003366] font-bold py-2 px-4 rounded-full shadow-md transition duration-200 transform hover:scale-105 mr-2 hover:bg-[#FFD700] hover:text-[#003366] border-2 border-transparent hover:border-[#003366]"
           >
-            UCBExM
+            UCB-Explorer Manager
           </button>
 
           {/* Enlaces de Acción (Regístrate / Log In) - ahora funcionales */}
@@ -167,6 +231,15 @@ const Header = ({ scrollToSection, openLoginModal, openRegisterModal, openUcbExm
               {item.name}
             </button>
           ))}
+          {/* Botón UCB-Explorer Manager en móvil */}
+          <div className="px-4 py-3">
+            <button
+              onClick={() => { openUcbExplorerManager(); setIsOpen(false); }}
+              className="bg-gray-200 w-full text-[#003366] font-bold py-3 rounded-lg transition duration-300 transform hover:scale-105 hover:bg-[#FFD700] hover:text-[#003366] border-2 border-transparent hover:border-[#003366]"
+            >
+              UCB-Explorer Manager
+            </button>
+          </div>
           <div className="px-4 pt-4 space-y-3">
              <button
                 className={`bg-white w-full hover:bg-gray-200 ${COLORS.textDark} font-bold py-3 rounded-lg transition duration-300 flex items-center justify-center space-x-2`}
@@ -226,7 +299,6 @@ const NewsCard = ({ title, date, excerpt }) => (
         </div>
     </div>
 );
-
 
 // 4. Componente de Formulario de Contacto (Estilizado)
 const ContactForm = () => {
@@ -357,10 +429,9 @@ const Footer = () => (
                         </a>
                     </div>
 
-                    {/* Google Maps Embed (Museo de Etnografía y Folklore - Representando la ubicación de la UCB Sede Central La Paz) */}
+                    {/* Google Maps Embed */}
                     <div className="mt-6 w-full max-w-sm rounded-xl overflow-hidden shadow-2xl border-4 border-gray-700">
                         <iframe 
-                            // URL incrustada para el Museo de Etnografía y Folklore (cercano a la UCB)
                             src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d1529.9866952864692!2d-68.10688195431633!3d-16.531778945781335!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x915f20658e4549f7%3A0x2a98f1f77f52f360!2sMuseo%20de%20Etnograf%C3%ADa%20y%20Folklore!5e0!3m2!1ses!2sbo!4v1700000000000!5m2!1ses!2sbo" 
                             width="100%" 
                             height="250" 
@@ -644,6 +715,31 @@ const UCBHome = () => {
         </>
       );
     }
+  };
+
+  // Función para manejar login exitoso
+  const handleLoginSuccess = (userData) => {
+    console.log('Login exitoso:', userData);
+    setShowLoginModal(false);
+    // Aquí puedes agregar más lógica post-login si es necesario
+  };
+
+  // Función para abrir UCB-Explorer Manager (redirige a Home.jsx)
+  const openUcbExplorerManager = () => {
+    console.log('Redirigiendo a UCB-Explorer Manager...');
+    navigate('/UCB-Explorer-Manager'); // Redirige a la ruta de Home.jsx
+  };
+
+  // Funciones para otros modales (placeholder)
+  const openRegisterModal = () => {
+    console.log('Abrir modal de registro');
+    // Aquí puedes implementar la lógica para abrir el modal de registro
+  };
+
+  const openAllNewsModal = () => {
+    console.log('Abrir todas las noticias');
+    // Aquí puedes implementar la lógica para mostrar todas las noticias
+  };
 
     const academicServices = [
         { icon: School, title: 'Pregrado (Licenciaturas)', description: 'Una amplia gama de carreras en áreas de Ingeniería, Ciencias Sociales, Derecho, Economía, y más.' },
@@ -689,162 +785,151 @@ const UCBHome = () => {
                       playsInline
                       preload="metadata"
                     />
-                    {/* Tono azul leve sobre el video */}
-                    <div className="absolute inset-0 bg-[#003366]/60"></div>
+                    
+                    {/* Nombre y Slogan */}
+                    <h1 className="text-5xl md:text-7xl font-black mb-4 leading-tight text-white drop-shadow-xl">
+                        Universidad Católica Boliviana <span className='text-[#FFD700]'>San Pablo</span>
+                    </h1>
 
-                    <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10 py-20">
-                        <div className="max-w-4xl mx-auto text-center animate-fadeIn">
-                            {/* Logo (ampliado para mejor visibilidad) */}
-                            <img 
-                                src="/photos/UCBLogo.png" 
-                                alt="Logo UCB" 
-                                className="w-48 h-48 mx-auto mb-6 animate-pulse-slow drop-shadow-lg object-contain" 
-                            />
-                            
-                            {/* Nombre y Slogan */}
-                            <h1 className="text-5xl md:text-7xl font-black mb-4 leading-tight text-white drop-shadow-xl">
-                                Universidad Católica Boliviana <span className='text-[#FFD700]'>San Pablo</span>
-                            </h1>
+                    <p className="text-xl md:text-3xl mb-10 max-w-3xl mx-auto text-gray-200 font-light italic border-t border-b border-gray-400/50 py-4">
+                        "Aqui tienes tu lugar"
+                    </p>
 
-                            <p className="text-xl md:text-3xl mb-10 max-w-3xl mx-auto text-gray-200 font-light italic border-t border-b border-gray-400/50 py-4">
-                                "Aqui tienes tu lugar"
+                    {/* CTA Principal */}
+                    <button
+                        className={`${COLORS.accent} ${COLORS.hoverAccent} ${COLORS.textDark} font-black py-4 px-12 rounded-full shadow-2xl text-xl transition duration-300 transform hover:scale-[1.05] border-2 border-transparent hover:border-white`}
+                        onClick={() => scrollToSection('services')}
+                    >
+                        Explora Nuestra Oferta Académica
+                    </button>
+                </div>
+            </div>
+        </section>
+        
+        {/* 3. SECCIÓN: Acerca de Nosotros (Historia, Misión y Visión) */}
+        <section id="about" className="py-20 bg-white">
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+                <h2 className={`text-4xl md:text-5xl font-extrabold text-center mb-16 ${COLORS.textDark.replace('text-', 'text-')}`}>
+                    <span className="text-[#FFD700]">Acerca</span> de Nosotros
+                </h2>
+                
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                    
+                    {/* Columna de Texto - Historia y Misión/Visión */}
+                    <div className="space-y-10 animate-fadeIn" style={{ animationDelay: '0.2s' }}>
+                        
+                        {/* Historia */}
+                        <div className="p-6 bg-gray-50 rounded-xl shadow-lg border-l-8 border-[#003366]">
+                            <h3 className="text-3xl font-bold mb-3 text-[#003366]">Historia y Logros</h3>
+                            <p className="text-gray-700 leading-relaxed">
+                                Fundada en 1966, la Universidad Católica Boliviana "San Pablo" ha sido pionera en la educación superior del país. A lo largo de sus décadas, ha sido elogiada por su excelencia académica y su compromiso con la formación humanista, destacando logros en investigación y liderazgo social. Es una institución de derecho público, sin fines de lucro, bajo la tuición de la Conferencia Episcopal Boliviana.
                             </p>
-
-                            {/* CTA Principal */}
-                            <button
-                                className={`${COLORS.accent} ${COLORS.hoverAccent} ${COLORS.textDark} font-black py-4 px-12 rounded-full shadow-2xl text-xl transition duration-300 transform hover:scale-[1.05] border-2 border-transparent hover:border-white`}
-                                onClick={() => scrollToSection('services')}
-                            >
-                                Explora Nuestra Oferta Académica
-                            </button>
                         </div>
-                    </div>
-                </section>
-                
-                {/* 3. SECCIÓN: Acerca de Nosotros (Historia, Misión y Visión) */}
-                <section id="about" className="py-20 bg-white">
-                    <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                        <h2 className={`text-4xl md:text-5xl font-extrabold text-center mb-16 ${COLORS.textDark.replace('text-', 'text-')}`}>
-                            <span className="text-[#FFD700]">Acerca</span> de Nosotros
-                        </h2>
                         
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-                            
-                            {/* Columna de Texto - Historia y Misión/Visión */}
-                            <div className="space-y-10 animate-fadeIn" style={{ animationDelay: '0.2s' }}>
-                                
-                                {/* Historia */}
-                                <div className="p-6 bg-gray-50 rounded-xl shadow-lg border-l-8 border-[#003366]">
-                                    <h3 className="text-3xl font-bold mb-3 text-[#003366]">Historia y Logros</h3>
-                                    <p className="text-gray-700 leading-relaxed">
-                                        Fundada en 1966, la Universidad Católica Boliviana "San Pablo" ha sido pionera en la educación superior del país. A lo largo de sus décadas, ha sido elogiada por su excelencia académica y su compromiso con la formación humanista, destacando logros en investigación y liderazgo social. Es una institución de derecho público, sin fines de lucro, bajo la tuición de la Conferencia Episcopal Boliviana.
-                                    </p>
-                                </div>
-                                
-                                {/* Misión */}
-                                <div className="p-6 bg-[#003366]/5 rounded-xl shadow-lg border-l-8 border-[#FFD700]">
-                                    <h3 className="text-3xl font-bold mb-3 text-[#003366] flex items-center"><CheckCircle className='w-6 h-6 mr-3'/> Nuestra Misión</h3>
-                                    <p className="text-gray-700 leading-relaxed italic">
-                                        "La constante búsqueda de la verdad mediante la investigación, la conservación y la comunicación del saber para el bien de la sociedad."
-                                    </p>
-                                </div>
-                                
-                                {/* Visión */}
-                                <div className="p-6 bg-[#003366]/5 rounded-xl shadow-lg border-l-8 border-gray-400">
-                                    <h3 className="text-3xl font-bold mb-3 text-[#003366] flex items-center"><TrendingUp className='w-6 h-6 mr-3'/> Nuestra Visión</h3>
-                                    <p className="text-gray-700 leading-relaxed italic">
-                                        "Ser universidad católica en salida, que desde su identidad investiga éticamente, forma integralmente profesionales de calidad y brinda educación para la vida, aportando agentes de cambio humanistas para el desarrollo sostenible de la humanidad."
-                                    </p>
-                                </div>
-                                
-                            </div>
+                        {/* Misión */}
+                        <div className="p-6 bg-[#003366]/5 rounded-xl shadow-lg border-l-8 border-[#FFD700]">
+                            <h3 className="text-3xl font-bold mb-3 text-[#003366] flex items-center"><CheckCircle className='w-6 h-6 mr-3'/> Nuestra Misión</h3>
+                            <p className="text-gray-700 leading-relaxed italic">
+                                "La constante búsqueda de la verdad mediante la investigación, la conservación y la comunicación del saber para el bien de la sociedad."
+                            </p>
+                        </div>
+                        
+                        {/* Visión */}
+                        <div className="p-6 bg-[#003366]/5 rounded-xl shadow-lg border-l-8 border-gray-400">
+                            <h3 className="text-3xl font-bold mb-3 text-[#003366] flex items-center"><TrendingUp className='w-6 h-6 mr-3'/> Nuestra Visión</h3>
+                            <p className="text-gray-700 leading-relaxed italic">
+                                "Ser universidad católica en salida, que desde su identidad investiga éticamente, forma integralmente profesionales de calidad y brinda educación para la vida, aportando agentes de cambio humanistas para el desarrollo sostenible de la humanidad."
+                            </p>
+                        </div>
+                        
+                    </div>
 
-                            {/* Columna de Imagen/Gráfico (Placeholder) */}
-                            <div className="hidden lg:block animate-fadeIn" style={{ animationDelay: '0.4s' }}>
-                                <div className="bg-gray-100 p-6 rounded-2xl shadow-inner border-2 border-dashed border-gray-300">
-                                    <h3 className="text-2xl font-bold text-center text-gray-700 mb-6">Nuestra Misión — Visual</h3>
-                                    <div className="w-full h-80 rounded-xl overflow-hidden border-4 border-[#003366]/30">
-                                        <img
-                                            src="/photos/mision.png"
-                                            alt="Imagen de la Misión UCB"
-                                            className="w-full h-full object-cover"
-                                        />
-                                    </div>
-                                </div>
+                    {/* Columna de Imagen/Gráfico (Placeholder) */}
+                    <div className="hidden lg:block animate-fadeIn" style={{ animationDelay: '0.4s' }}>
+                        <div className="bg-gray-100 p-6 rounded-2xl shadow-inner border-2 border-dashed border-gray-300">
+                            <h3 className="text-2xl font-bold text-center text-gray-700 mb-6">Nuestra Misión — Visual</h3>
+                            <div className="w-full h-80 rounded-xl overflow-hidden border-4 border-[#003366]/30">
+                                <img
+                                    src="/photos/mision.png"
+                                    alt="Imagen de la Misión UCB"
+                                    className="w-full h-full object-cover"
+                                />
                             </div>
                         </div>
                     </div>
-                </section>
+                </div>
+            </div>
+        </section>
+        
+        {/* 4. SECCIÓN: Productos o Servicios (Oferta Académica) */}
+        <section id="services" className={`py-20 ${COLORS.primary} bg-opacity-95`}>
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+                <h2 className={`text-4xl md:text-5xl font-extrabold text-center mb-4 ${COLORS.textLight.replace('text-', 'text-')}`}>
+                    Nuestra <span className="text-[#FFD700]">Oferta Académica</span>
+                </h2>
+                <p className="text-xl text-gray-300 text-center mb-16 max-w-3xl mx-auto">
+                    Formando profesionales y líderes en todas las áreas del conocimiento.
+                </p>
+
+                {/* Descripción de Servicios */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+                    {academicServices.map((service, index) => (
+                        <div 
+                            key={index}
+                            className="p-6 bg-white rounded-2xl shadow-xl border-t-8 border-[#FFD700] text-center transform hover:scale-[1.02] transition duration-300"
+                        >
+                            <service.icon className={`w-12 h-12 mx-auto mb-4 ${COLORS.textDark.replace('text-', 'text-')}`} />
+                            <h3 className="text-2xl font-bold mb-3 text-[#003366]">{service.title}</h3>
+                            <p className="text-gray-700">{service.description}</p>
+                        </div>
+                    ))}
+                </div>
                 
-                {/* 4. SECCIÓN: Productos o Servicios (Oferta Académica) */}
-                <section id="services" className={`py-20 ${COLORS.primary} bg-opacity-95`}>
-                    <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                        <h2 className={`text-4xl md:text-5xl font-extrabold text-center mb-4 ${COLORS.textLight.replace('text-', 'text-')}`}>
-                            Nuestra <span className="text-[#FFD700]">Oferta Académica</span>
-                        </h2>
-                        <p className="text-xl text-gray-300 text-center mb-16 max-w-3xl mx-auto">
-                            Formando profesionales y líderes en todas las áreas del conocimiento.
-                        </p>
-
-                        {/* Descripción de Servicios */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
-                            {academicServices.map((service, index) => (
-                                <div 
-                                    key={index}
-                                    className="p-6 bg-white rounded-2xl shadow-xl border-t-8 border-[#FFD700] text-center transform hover:scale-[1.02] transition duration-300"
-                                >
-                                    <service.icon className={`w-12 h-12 mx-auto mb-4 ${COLORS.textDark.replace('text-', 'text-')}`} />
-                                    <h3 className="text-2xl font-bold mb-3 text-[#003366]">{service.title}</h3>
-                                    <p className="text-gray-700">{service.description}</p>
-                                </div>
-                            ))}
-                        </div>
-                        
-                        {/* Ventajas Competitivas */}
-                        <div className="mt-20">
-                            <h3 className="text-3xl font-bold text-center mb-10 text-[#FFD700] flex items-center justify-center">
-                                <Zap className='w-6 h-6 mr-3'/> Ventajas Competitivas
-                            </h3>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                                {competitiveAdvantages.map((adv, index) => (
-                                    <AdvantageCard key={index} {...adv} />
-                                ))}
-                            </div>
-                        </div>
+                {/* Ventajas Competitivas */}
+                <div className="mt-20">
+                    <h3 className="text-3xl font-bold text-center mb-10 text-[#FFD700] flex items-center justify-center">
+                        <Zap className='w-6 h-6 mr-3'/> Ventajas Competitivas
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                        {competitiveAdvantages.map((adv, index) => (
+                            <AdvantageCard key={index} {...adv} />
+                        ))}
                     </div>
-                </section>
+                </div>
+            </div>
+        </section>
 
-                {/* 5. SECCIÓN: Noticias o Novedades */}
-                <section id="news" className="py-20 bg-gray-100">
-                    <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                        <h2 className={`text-4xl md:text-5xl font-extrabold text-center mb-4 ${COLORS.textDark.replace('text-', 'text-')}`}>
-                            Últimas <span className="text-[#FFD700]">Novedades</span>
-                        </h2>
-                        <p className="text-xl text-gray-600 text-center mb-16 max-w-3xl mx-auto">
-                            Mantente al día con nuestros eventos, ofertas y logros institucionales.
-                        </p>
+        {/* 5. SECCIÓN: Noticias o Novedades */}
+        <section id="news" className="py-20 bg-gray-100">
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+                <h2 className={`text-4xl md:text-5xl font-extrabold text-center mb-4 ${COLORS.textDark.replace('text-', 'text-')}`}>
+                    Últimas <span className="text-[#FFD700]">Novedades</span>
+                </h2>
+                <p className="text-xl text-gray-600 text-center mb-16 max-w-3xl mx-auto">
+                    Mantente al día con nuestros eventos, ofertas y logros institucionales.
+                </p>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                            {newsItems.map((item, index) => (
-                                <NewsCard key={index} {...item} />
-                            ))}
-                        </div>
-                        
-                        <div className="text-center mt-12">
-                            <button
-                                className={`${COLORS.primary} ${COLORS.hoverPrimary} ${COLORS.textLight} font-bold py-3 px-10 rounded-full shadow-lg transition duration-300 transform hover:scale-105 flex items-center justify-center mx-auto`}
-                                onClick={openAllNewsModal}
-                            >
-                                Ver Todas las Noticias
-                            </button>
-                        </div>
-                    </div>
-                </section>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    {newsItems.map((item, index) => (
+                        <NewsCard key={index} {...item} />
+                    ))}
+                </div>
                 
-                {/* 6. Footer (Incluye Contacto, Formulario, Redes y Mapa) */}
-                <Footer />
+                <div className="text-center mt-12">
+                    <button
+                        className={`${COLORS.primary} ${COLORS.hoverPrimary} ${COLORS.textLight} font-bold py-3 px-10 rounded-full shadow-lg transition duration-300 transform hover:scale-105 flex items-center justify-center mx-auto`}
+                        onClick={openAllNewsModal}
+                    >
+                        Ver Todas las Noticias
+                    </button>
+                </div>
+            </div>
+        </section>
+        
+        {/* 6. Footer (Incluye Contacto, Formulario, Redes y Mapa) */}
+        <Footer />
 
-            </main>
+      </main>
 
             {/* Modales */}
             <LoginModal isOpen={showLoginModal} closeModal={closeLoginModal} onLogin={handleLogin} />
