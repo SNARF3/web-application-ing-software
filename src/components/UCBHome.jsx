@@ -124,7 +124,8 @@ const CustomStyles = () => (
 // --- Componentes Reutilizables ---
 
 // 1. Barra de Navegación Fija (Header)
-const Header = ({ scrollToSection, openLoginModal, openRegisterModal, openUcbExplorerManager }) => {
+// Modificado para recibir openLoginModal, openRegisterModal y openUcbExm
+const Header = ({ scrollToSection, openLoginModal, openRegisterModal, openUcbExm, isAuthenticated, onLogout }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const navItems = [
@@ -186,13 +187,23 @@ const Header = ({ scrollToSection, openLoginModal, openRegisterModal, openUcbExp
             <UserPlus className="w-5 h-5" />
             <span>Regístrate</span>
           </button>
-          <button
-            className={`${COLORS.accent} ${COLORS.hoverAccent} ${COLORS.textDark} font-bold py-2.5 px-6 rounded-full shadow-lg transition duration-300 transform hover:scale-105 flex items-center space-x-2 border-2 border-transparent hover:border-[#003366]`}
-            onClick={openLoginModal}
-          >
-            <LogIn className="w-5 h-5" />
-            <span>Log In</span>
-          </button>
+          {!isAuthenticated ? (
+            <button
+              className={`${COLORS.accent} ${COLORS.hoverAccent} ${COLORS.textDark} font-bold py-2.5 px-6 rounded-full shadow-lg transition duration-300 transform hover:scale-105 flex items-center space-x-2 border-2 border-transparent hover:border-[#003366]`}
+              onClick={openLoginModal}
+            >
+              <LogIn className="w-5 h-5" />
+              <span>Log In</span>
+            </button>
+          ) : (
+            <button
+              className={`bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-6 rounded-full shadow-lg transition duration-300 transform hover:scale-105 flex items-center space-x-2`}
+              onClick={onLogout}
+            >
+              <X className="w-5 h-5" />
+              <span>Cerrar sesión</span>
+            </button>
+          )}
         </nav>
 
         {/* Mobile Menu Button */}
@@ -237,13 +248,23 @@ const Header = ({ scrollToSection, openLoginModal, openRegisterModal, openUcbExp
                 <UserPlus className="w-5 h-5" />
                 <span>Regístrate</span>
               </button>
-            <button
-              className={`${COLORS.accent} w-full ${COLORS.hoverAccent} ${COLORS.textDark} font-bold py-3 rounded-lg transition duration-300 flex items-center justify-center space-x-2`}
-              onClick={() => { openLoginModal(); setIsOpen(false); }} 
-            >
-              <LogIn className="w-5 h-5" />
-              <span>Log In</span>
-            </button>
+            {!isAuthenticated ? (
+              <button
+                className={`${COLORS.accent} w-full ${COLORS.hoverAccent} ${COLORS.textDark} font-bold py-3 rounded-lg transition duration-300 flex items-center justify-center space-x-2`}
+                onClick={() => { openLoginModal(); setIsOpen(false); }} 
+              >
+                <LogIn className="w-5 h-5" />
+                <span>Log In</span>
+              </button>
+            ) : (
+              <button
+                className={`bg-red-600 w-full text-white font-bold py-3 rounded-lg transition duration-300 flex items-center justify-center space-x-2`}
+                onClick={() => { onLogout(); setIsOpen(false); }}
+              >
+                <X className="w-5 h-5" />
+                <span>Cerrar sesión</span>
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -456,16 +477,243 @@ const Footer = () => (
     </footer>
 );
 
+
+// === NUEVOS/MODIFICADOS: Modales (Login, Register, AllNews) ===
+
+const LoginModal = ({ isOpen, closeModal, onLogin }) => {
+  const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [attempts, setAttempts] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  if (!isOpen) return null;
+
+  // Helper: llamar al endpoint bulk para insertar logs para todos los usuarios
+  const sendBulkLog = async (tipo_log) => {
+    try {
+      await fetch('http://localhost:3000/logs/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tipo_log }),
+      });
+    } catch (err) {
+      console.error('Error enviando log bulk:', err);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+
+    // Simulación simple de autenticación:
+    // - Si la contraseña tiene menos de 4 caracteres -> fallo (tipo 3)
+    // - Si la contraseña es 'admin' -> éxito
+    await new Promise(r => setTimeout(r, 700));
+
+    if (password.length < 4) {
+      // intento fallido
+      setAttempts(a => {
+        const next = a + 1;
+        // enviar tipo 3 (inicio fallido)
+        sendBulkLog(3);
+        if (next >= 3) {
+          // demasiados intentos fallidos -> tipo 4
+          sendBulkLog(4);
+        }
+        return next;
+      });
+      setError('Credenciales incorrectas. Intenta de nuevo.');
+      setLoading(false);
+      return;
+    }
+
+    // Éxito de login (simulado)
+    // Enviar log tipo 1
+    await sendBulkLog(1);
+    setAttempts(0);
+    setLoading(false);
+    // Avisar al padre
+    if (onLogin) onLogin({ email });
+    closeModal();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-gray-900 bg-opacity-80 z-[100] flex items-center justify-center">
+      <div className="bg-white rounded-2xl w-full max-w-md p-0 shadow-2xl border-t-8 border-[#FFD700]">
+        <div className={`${COLORS.primary} p-6 rounded-t-xl flex justify-between items-center`}>
+          <h3 className="text-2xl font-bold text-white flex items-center">
+            <LogIn className="w-6 h-6 mr-3 text-[#FFD700]" />
+            Acceso UCB
+          </h3>
+          <button onClick={closeModal} className="text-white hover:text-[#FFD700] p-1 rounded-full">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+        <div className="p-6">
+          <form onSubmit={handleSubmit}>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Correo institucional</label>
+            <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" required className="w-full p-3 border border-gray-300 rounded-lg mb-4" placeholder="ejemplo@ucb.edu.bo" />
+            <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
+            <div className="relative mb-4">
+              <input value={password} onChange={(e) => setPassword(e.target.value)} type={showPassword ? 'text' : 'password'} required className="w-full p-3 border border-gray-300 rounded-lg pr-10" placeholder="••••••••" />
+              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400">
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
+
+            {error && <div className="text-sm text-red-600 mb-3">{error}</div>}
+
+            <button disabled={loading} type="submit" className={`${COLORS.accent} ${COLORS.hoverAccent} w-full ${COLORS.textDark} font-black py-3 rounded-lg shadow-xl`}>{loading ? 'Procesando...' : 'Acceder'}</button>
+          </form>
+          <div className="mt-4 text-center text-sm">
+            <button onClick={() => { console.log('Forgot password'); }} className="text-[#003366] underline">¿Problemas para iniciar sesión?</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const RegisterModal = ({ isOpen, closeModal }) => {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 bg-gray-900 bg-opacity-80 z-[100] flex items-center justify-center">
+      <div className="bg-white rounded-2xl w-full max-w-md p-0 shadow-2xl border-t-8 border-[#FFD700]">
+        <div className={`${COLORS.primary} p-6 rounded-t-xl`}>
+          <h3 className="text-2xl font-bold text-white flex items-center">
+            <UserPlus className="w-6 h-6 mr-3 text-[#FFD700]" />
+            Registro UCB
+          </h3>
+        </div>
+        <div className="p-6">
+          <form onSubmit={(e) => { e.preventDefault(); console.log('Register', { name, email }); closeModal(); }}>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Nombre completo</label>
+            <input value={name} onChange={(e) => setName(e.target.value)} required className="w-full p-3 border border-gray-300 rounded-lg mb-4" />
+            <label className="block text-sm font-medium text-gray-700 mb-1">Correo institucional</label>
+            <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" required className="w-full p-3 border border-gray-300 rounded-lg mb-4" />
+            <button type="submit" className={`${COLORS.accent} ${COLORS.hoverAccent} w-full ${COLORS.textDark} font-black py-3 rounded-lg shadow-xl`}>Crear cuenta</button>
+          </form>
+          <div className="mt-4 text-center text-sm">
+            <button onClick={closeModal} className="text-[#003366] underline">Cancelar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const AllNewsModal = ({ isOpen, closeModal, news }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-60 z-[110] flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl w-full max-w-3xl p-6 shadow-2xl overflow-auto max-h-[80vh]">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-2xl font-bold text-[#003366]">Centro de Anuncios — Noticias UCB</h3>
+          <button onClick={closeModal} className="text-gray-500 hover:text-[#003366]"><X className="w-6 h-6" /></button>
+        </div>
+        <div className="space-y-4">
+          {news.map((n, i) => (
+            <NewsCard key={i} {...n} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // --- Componente Principal Exportado (UCBHome) ---
 const UCBHome = () => {
+     const [showUCBExM, setShowUCBExM] = useState(false);
+ 
+     // apertura directa de la pantalla Home.jsx en modo "pantalla completa"
+     const openUcbExm = () => {
+       // opcional: push estado al history/hash si quieres permitir "volver" con el botón atrás
+       // window.location.hash = '#ucbexm';
+       setShowUCBExM(true);
+     };
+ 
+  // modales
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const navigate = useNavigate(); // Hook para navegación
-  
-  // Función para manejar scroll suave
-  const scrollToSection = (sectionId) => {
-    const element = document.getElementById(sectionId);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
+     const [showRegisterModal, setShowRegisterModal] = useState(false);
+     const [showAllNewsModal, setShowAllNewsModal] = useState(false);
+
+  // Estado de autenticación (simulado)
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [currentUserEmail, setCurrentUserEmail] = useState(null);
+
+    const openLoginModal = () => setShowLoginModal(true);
+    const closeLoginModal = () => setShowLoginModal(false);
+    const openRegisterModal = () => setShowRegisterModal(true);
+    const closeRegisterModal = () => setShowRegisterModal(false);
+    const openAllNewsModal = () => setShowAllNewsModal(true);
+    const closeAllNewsModal = () => setShowAllNewsModal(false);
+
+    // Enviar bulk log helper
+    const sendBulkLog = async (tipo_log) => {
+      try {
+        await fetch('http://localhost:3000/logs/bulk', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tipo_log }),
+        });
+      } catch (err) {
+        console.error('Error enviando bulk log:', err);
+      }
+    };
+
+    const handleLogin = async ({ email }) => {
+      setIsAuthenticated(true);
+      setCurrentUserEmail(email);
+      // El LoginModal ya envía tipo 1, pero por seguridad podemos volver a enviar o no. Aquí no lo reenviamos.
+    };
+
+    const handleLogout = async () => {
+      // Enviar tipo 2 (cierre de sesión manual)
+      await sendBulkLog(2);
+      setIsAuthenticated(false);
+      setCurrentUserEmail(null);
+    };
+
+    const scrollToSection = (id) => {
+        const element = document.getElementById(id);
+        if (element) {
+            const y = element.getBoundingClientRect().top + window.pageYOffset - 90;
+            window.scrollTo({ top: y, behavior: 'smooth' });
+        }
+    };
+
+    useEffect(() => {
+      const checkHash = () => setShowUCBExM(window.location.hash === '#ucbexm');
+      checkHash();
+      window.addEventListener('hashchange', checkHash);
+      return () => window.removeEventListener('hashchange', checkHash);
+    }, []);
+
+    // Noticias extendidas (7 reales y plausibles para UCB)
+    const expandedNews = [
+      { title: 'Lanzamiento del Laboratorio de Inteligencia Artificial', date: '22 Octubre, 2025', excerpt: 'Nuevo laboratorio en la Sede Central para impulsar investigación y proyectos con empresas locales.' },
+      { title: 'Convocatoria: Becas de Excelencia Académica 2026', date: '15 Octubre, 2025', excerpt: 'Postulaciones abiertas para estudiantes destacados con cobertura parcial y total.' },
+      { title: 'Feria Vocacional UCB 2025', date: '01 Octubre, 2025', excerpt: 'Más de 70 colegios invitados para conocer carreras y becas disponibles.' },
+      { title: 'Convenio Internacional con Universidad de Salamanca', date: '20 Septiembre, 2025', excerpt: 'Programa de movilidad docente y estudiantil para el próximo año académico.' },
+      { title: 'Publicación: Reporte Anual de Investigación 2024-2025', date: '05 Septiembre, 2025', excerpt: 'Resumen de proyectos destacados y su impacto social en la región.' },
+      { title: 'Implementación de Autenticación Multifactor', date: '10 Agosto, 2025', excerpt: 'Aumentamos la seguridad en accesos institucionales para proteger datos de estudiantes y personal.' },
+      { title: 'Capacitación Docente en Metodologías Híbridas', date: '22 Julio, 2025', excerpt: 'Cursos y certificaciones para mejorar la enseñanza presencial y online.' },
+    ];
+
+    // Si showUCBExM es true mostramos Home.jsx totalmente (pantalla completa, sin header propio de UCBHome)
+    if (showUCBExM) {
+      return (
+        <> 
+          <CustomStyles />
+          {/* Home.jsx ya contiene su propio Header y modales internos; renderizamos solo ese componente */}
+          <Home />
+        </>
+      );
     }
   };
 
@@ -493,44 +741,49 @@ const UCBHome = () => {
     // Aquí puedes implementar la lógica para mostrar todas las noticias
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <CustomStyles />
-      
-      <Header 
-        scrollToSection={scrollToSection}
-        openLoginModal={() => setShowLoginModal(true)}
-        openRegisterModal={openRegisterModal}
-        openUcbExplorerManager={openUcbExplorerManager} // Cambiado el nombre
-      />
+    const academicServices = [
+        { icon: School, title: 'Pregrado (Licenciaturas)', description: 'Una amplia gama de carreras en áreas de Ingeniería, Ciencias Sociales, Derecho, Economía, y más.' },
+        { icon: Laptop, title: 'Posgrado (Maestrías y Diplomas)', description: 'Programas de alta especialización para profesionales que buscan avanzar en su campo laboral.' },
+        { icon: BookOpen, title: 'Formación Continua y Talleres', description: 'Cursos cortos y diplomados especializados para actualización profesional rápida.' },
+    ];
 
-      <main className="pt-20"> 
+    const competitiveAdvantages = [
+        { icon: ShieldCheck, title: 'Acreditación y Prestigio', description: 'Reconocimiento internacional y calidad académica avalada por organismos de prestigio global.', delay: 0.1 },
+        { icon: Award, title: 'Investigación de Impacto', description: 'Centros de investigación activos que contribuyen al desarrollo social y tecnológico del país.', delay: 0.2 },
+        { icon: TrendingUp, title: 'Alta Empleabilidad', description: 'Líder en la inserción laboral de sus graduados en las empresas e instituciones más importantes.', delay: 0.3 },
+        { icon: Layers, title: 'Infraestructura de Vanguardia', description: 'Laboratorios modernos, bibliotecas especializadas y campus diseñados para el aprendizaje.', delay: 0.4 },
+    ];
 
-        {/* 2. SECCIÓN PRINCIPAL: Hero / Bienvenida */}
-        <section 
-            id="hero" 
-            className={`${COLORS.primary} relative min-h-screen flex items-center overflow-hidden`}
-        >
-            {/* Video de fondo local + overlay azul leve para contraste */}
-            <video
-              className="absolute inset-0 w-full h-full object-cover"
-              src="/videos/UCBCampus.mp4"
-              autoPlay
-              muted
-              loop
-              playsInline
-              preload="metadata"
-            />
-            {/* Tono azul leve sobre el video */}
-            <div className="absolute inset-0 bg-[#003366]/60"></div>
+    const newsItems = [
+        { title: 'Convocatoria: Becas de Excelencia Académica 2026', date: '20 Octubre, 2025', excerpt: 'Inscripciones abiertas para estudiantes con alto rendimiento. ¡No te quedes sin la tuya!' },
+        { title: 'Inauguración del Laboratorio de IA y Robótica', date: '15 Octubre, 2025', excerpt: 'Un hito en la formación de ingenieros del futuro en nuestra sede central.' },
+        { title: 'Semana del Postulante: Jornadas de Puertas Abiertas', date: '01 Octubre, 2025', excerpt: 'Visita nuestros campus y participa en talleres vocacionales gratuitos.' },
+    ];
 
-            <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10 py-20">
-                <div className="max-w-4xl mx-auto text-center animate-fadeIn">
-                    {/* Logo (ampliado para mejor visibilidad) */}
-                    <img 
-                        src="/photos/UCBLogo.png" 
-                        alt="Logo UCB" 
-                        className="w-48 h-48 mx-auto mb-6 animate-pulse-slow drop-shadow-lg object-contain" 
+    return (
+        <div className="min-h-screen bg-gray-50 font-inter">
+            
+            <CustomStyles />
+            
+            {/* 1. Header (Encabezado y Navegación) */}
+            <Header scrollToSection={scrollToSection} openLoginModal={openLoginModal} openRegisterModal={openRegisterModal} openUcbExm={openUcbExm} isAuthenticated={isAuthenticated} onLogout={handleLogout} />
+
+            <main className="pt-20"> 
+
+                {/* 2. SECCIÓN PRINCIPAL: Hero / Bienvenida */}
+                <section 
+                    id="hero" 
+                    className={`${COLORS.primary} relative min-h-screen flex items-center overflow-hidden`}
+                >
+                    {/* Video de fondo local + overlay azul leve para contraste */}
+                    <video
+                      className="absolute inset-0 w-full h-full object-cover"
+                      src="/videos/UCBCampus.mp4"
+                      autoPlay
+                      muted
+                      loop
+                      playsInline
+                      preload="metadata"
                     />
                     
                     {/* Nombre y Slogan */}
@@ -678,14 +931,12 @@ const UCBHome = () => {
 
       </main>
 
-      {/* Modal de Login */}
-      <LoginModal 
-        isOpen={showLoginModal}
-        closeModal={() => setShowLoginModal(false)}
-        onLoginSuccess={handleLoginSuccess}
-      />
-    </div>
-  );
+            {/* Modales */}
+            <LoginModal isOpen={showLoginModal} closeModal={closeLoginModal} onLogin={handleLogin} />
+            <RegisterModal isOpen={showRegisterModal} closeModal={closeRegisterModal} />
+            <AllNewsModal isOpen={showAllNewsModal} closeModal={closeAllNewsModal} news={expandedNews} />
+        </div>
+    );
 };
 
 export default UCBHome;
