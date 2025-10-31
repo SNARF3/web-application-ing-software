@@ -90,7 +90,54 @@ const AdminSidebar = ({ activeModule, setActiveModule, modules, hasLoggedBefore 
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const navigate = useNavigate();
     
-    const handleLogout = () => {
+    const handleLogout = async () => {
+        // Before clearing session, get user info for the log
+        const userStr = sessionStorage.getItem('user');
+        const token = sessionStorage.getItem('token');
+        let userObj = null;
+        try { 
+            userObj = userStr ? JSON.parse(userStr) : null; 
+        } catch (e) { 
+            userObj = null; 
+        }
+
+        // Get the user ID for the log
+        const userId = userObj?.id || userObj?.id_usuario;
+        if (!userId) {
+            console.error('Error: No se encontró id_usuario para el log de cierre de sesión');
+            localStorage.clear();
+            sessionStorage.clear();
+            setShowLogoutModal(false);
+            navigate('/');
+            return;
+        }
+
+        // Log the logout action
+        try {
+            // Solo enviar los campos requeridos por la API
+            const payload = {
+                id_usuario: userId,
+                tipo_log: 2  // 2 = Cierre de sesión manual
+            };
+            
+            const response = await fetch('http://localhost:3000/logs', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { Authorization: `Bearer ${token}` } : {})
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                console.error('Error al registrar log de cierre de sesión:', response.status, errorData);
+            }
+        } catch (error) {
+            console.error('Error al registrar log de cierre de sesión:', error);
+        }
+
+        // Clear session and redirect
         localStorage.clear();
         sessionStorage.clear();
         setShowLogoutModal(false);
