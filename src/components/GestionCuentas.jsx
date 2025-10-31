@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   UserPlus, User, Mail, Lock, AlertCircle, CheckCircle, 
   Eye, EyeOff, Shield, Users, Clock, LogIn, TrendingDown, Bell, Check, LockKeyhole
@@ -28,16 +28,23 @@ const ROLES = [
   },
 ];
 
-// Datos de actividad de ejemplo (Actualizados: SOLO eventos de ACCESO/SESIÓN)
-const AUDIT_LOG = [
-  { time: 'Hace 5 min', user: 'AdminUCB', event: 'Inicio de sesión exitoso.', type: 'login', status: 'success' },
-  { time: 'Hace 10 min', user: 'Colaborador_Laura', event: 'Cierre de sesión manual.', type: 'logout', status: 'info' },
-  { time: 'Hace 30 min', user: 'AdminUCB', event: 'Intento de sesión fallido (Contraseña incorrecta).', type: 'security', status: 'warning' },
-  { time: 'Hace 1 hr', user: 'Colaborador_Juan', event: 'Bloqueo temporal de cuenta por 5 intentos fallidos.', type: 'security', status: 'error' },
-  { time: 'Hace 2 hrs', user: 'Colaborador_Laura', event: 'Inicio de sesión exitoso después de 12 días de inactividad.', type: 'login', status: 'success' },
-  { time: 'Hace 3 hrs', user: 'AdminUCB', event: 'Intento de inicio de sesión desde ubicación no reconocida.', type: 'security', status: 'error' },
-  { time: 'Hace 4 hrs', user: 'AdminUCB', event: 'Cierre de sesión por inactividad.', type: 'logout', status: 'info' },
-];
+// Estado y utilidades para obtener logs desde la API
+// Endpoint esperado: GET http://localhost:3000/logs -> array de objetos con campos como
+// { id_log, fechahora, nombre_usuario, apellido_usuario, nombre_rol, tipo_log }
+
+// Mapea tipo_log numérico a texto, estado y icono/colores
+const LOG_TYPES = {
+  1: { text: 'Inicio de sesión exitoso', status: 'success', Icon: LogIn },
+  2: { text: 'Cierre de sesión manual', status: 'info', Icon: Bell },
+  3: { text: 'Inicio de sesión fallido', status: 'warning', Icon: AlertCircle },
+  4: { text: 'Intento de acceso no autorizado', status: 'error', Icon: TrendingDown },
+  5: { text: 'Registro de nuevo usuario o paciente', status: 'success', Icon: UserPlus },
+  6: { text: 'Actualización de datos', status: 'info', Icon: Check },
+  7: { text: 'Eliminación de registro', status: 'error', Icon: TrendingDown },
+  8: { text: 'Medición registrada', status: 'success', Icon: CheckCircle },
+  9: { text: 'Visualización de reportes', status: 'info', Icon: Clock },
+  10: { text: 'Cambio de contraseña', status: 'info', Icon: LockKeyhole },
+};
 
 // --- Estilos CSS Personalizados para Animaciones ---
 const CustomStyles = () => (
@@ -107,6 +114,11 @@ const GestionCuentas = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false); // <-- agregado
+
+  // Logs: cargados desde la API /logs
+  const [logs, setLogs] = useState([]);
+  const [loadingLogs, setLoadingLogs] = useState(false);
+  const [errorLogs, setErrorLogs] = useState(null);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -205,6 +217,55 @@ const GestionCuentas = () => {
       setLoading(false);
     }
   };
+
+  // --- Util: tiempo relativo en español (Hace X) ---
+  const timeAgo = (isoDate) => {
+    try {
+      const then = new Date(isoDate);
+      const now = new Date();
+      const diff = Math.floor((now - then) / 1000); // seconds
+
+      if (diff < 60) return `Hace ${diff} ${diff === 1 ? 'segundo' : 'segundos'}`;
+      const mins = Math.floor(diff / 60);
+      if (mins < 60) return `Hace ${mins} ${mins === 1 ? 'minuto' : 'minutos'}`;
+      const hours = Math.floor(mins / 60);
+      if (hours < 24) return `Hace ${hours} ${hours === 1 ? 'hora' : 'horas'}`;
+      const days = Math.floor(hours / 24);
+      return `Hace ${days} ${days === 1 ? 'día' : 'días'}`;
+    } catch (e) {
+      return '';
+    }
+  };
+
+  // --- Cargar logs desde la API al montar ---
+  useEffect(() => {
+    let mounted = true;
+    const fetchLogs = async () => {
+      setLoadingLogs(true);
+      setErrorLogs(null);
+      try {
+        const res = await fetch('http://localhost:3000/logs');
+        if (!res.ok) throw new Error(`Error ${res.status} - ${res.statusText}`);
+        const data = await res.json();
+        if (!mounted) return;
+        // Esperamos un array; normalizamos por seguridad
+        if (Array.isArray(data)) {
+          setLogs(data);
+        } else {
+          setLogs([]);
+          setErrorLogs('Respuesta inesperada de la API de logs.');
+        }
+      } catch (err) {
+        setErrorLogs(err.message || 'Error al obtener logs');
+        setLogs([]);
+      } finally {
+        if (mounted) setLoadingLogs(false);
+      }
+    };
+
+    fetchLogs();
+    return () => { mounted = false; };
+  }, []);
 
   return (
     <div className="p-4 md:p-8 bg-gray-50 min-h-screen font-inter">
@@ -394,47 +455,66 @@ const GestionCuentas = () => {
         <p className="text-gray-600 mb-4">Registro detallado de inicios de sesión, cierres, intentos fallidos y bloqueos por seguridad.</p>
         
         <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
-          {AUDIT_LOG.map((log, index) => {
-            let color, Icon, borderColor, bgColor;
-            
-            switch (log.status) {
+          {loadingLogs && (
+            <div className="text-sm text-gray-500">Cargando registros de auditoría...</div>
+          )}
+
+          {errorLogs && (
+            <div className="text-sm text-red-600">{errorLogs}</div>
+          )}
+
+          {!loadingLogs && !errorLogs && logs.length === 0 && (
+            <div className="text-sm text-gray-500">No hay registros de auditoría disponibles.</div>
+          )}
+
+          {logs.map((log, index) => {
+            const meta = LOG_TYPES[log.tipo_log] || { text: 'Evento desconocido', status: 'info', Icon: Bell };
+            let color, borderColor, bgColor;
+
+            switch (meta.status) {
               case 'success':
                 color = 'text-green-600';
                 borderColor = 'border-green-500';
                 bgColor = 'bg-green-50';
-                Icon = LogIn;
                 break;
               case 'warning':
                 color = 'text-yellow-600';
                 borderColor = 'border-yellow-500';
                 bgColor = 'bg-yellow-50';
-                Icon = AlertCircle;
                 break;
               case 'error':
                 color = 'text-red-600';
                 borderColor = 'border-red-500';
                 bgColor = 'bg-red-50';
-                Icon = TrendingDown;
                 break;
-              default: // info (cierre de sesión)
+              default:
                 color = 'text-blue-600';
                 borderColor = 'border-blue-500';
                 bgColor = 'bg-blue-50';
-                Icon = Bell;
             }
 
+            const Icon = meta.Icon || Bell;
+
+            // Prefijo según rol: si nombre_rol contiene 'Admin' o 'Administrador' => admin_, sino colaborador_
+            const roleName = (log.nombre_rol || '').toLowerCase();
+            const prefix = roleName.includes('admin') || roleName.includes('administrador') ? 'admin' : 'colaborador';
+            const displayUser = `${prefix}_${log.nombre_usuario}`;
+
+            const eventText = meta.text;
+            const timeText = timeAgo(log.fechahora);
+
             return (
-              <div 
-                key={index} 
+              <div
+                key={log.id_log ?? index}
                 className={`p-4 rounded-xl border-l-4 ${borderColor} ${bgColor} flex items-center justify-between text-sm transition duration-200 hover:shadow-md animate-fadeIn`}
-                style={{ animationDelay: `${0.2 + index * 0.05}s` }}
+                style={{ animationDelay: `${0.2 + index * 0.03}s` }}
               >
                 <div className="flex items-center w-full">
                   <Icon className={`w-5 h-5 mr-3 ${color} flex-shrink-0`} />
                   <div className="flex-grow grid grid-cols-2 md:grid-cols-4 items-center">
-                    <p className={`font-bold ${color}`}>{log.user}</p>
-                    <p className="text-gray-700 col-span-2">{log.event}</p>
-                    <p className="text-xs text-gray-500 text-right">{log.time}</p>
+                    <p className={`font-bold ${color}`}>{displayUser}</p>
+                    <p className="text-gray-700 col-span-2">{eventText}</p>
+                    <p className="text-xs text-gray-500 text-right">{timeText}</p>
                   </div>
                 </div>
               </div>
