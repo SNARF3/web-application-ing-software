@@ -72,7 +72,7 @@ const PasswordRequirementItem = ({ isValid, children }) => {
 };
 
 
-const GestionContrasenas = () => {
+const GestionContrasenas = ({ setHasLoggedBefore }) => {
     const [formData, setFormData] = useState({
         currentPassword: '',
         newPassword: '',
@@ -171,29 +171,23 @@ const GestionContrasenas = () => {
                 })
             });
 
-            const data = await response.json();
+            const data = await response.json().catch(() => ({}));
 
             if (!response.ok) {
                 throw new Error(data.message || 'Error al cambiar la contraseña');
             }
 
-            // Éxito
+            // Éxito: notificar y permitir navegación (marca hasLoggedBefore = true)
             setMessage({ 
                 type: 'success', 
                 text: 'Contraseña actualizada con éxito! Por favor, mantenga su cuenta segura.' 
             });
-            // Enviar log tipo 5 (Cambio de contraseña) usando endpoint bulk
-            (async () => {
-                try {
-                    await fetch('http://localhost:3000/logs/bulk', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ tipo_log: 5 }),
-                    });
-                } catch (err) {
-                    console.error('Error enviando log de cambio de contraseña:', err);
-                }
-            })();
+
+            // marcar que el usuario ya cambió su contraseña (habilita navegación)
+            if (typeof setHasLoggedBefore === 'function') {
+                setHasLoggedBefore(true);
+            }
+
             // Resetear formulario
             setFormData({
                 currentPassword: '',

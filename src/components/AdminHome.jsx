@@ -85,7 +85,7 @@ const LogoutConfirmModal = ({ isOpen, onClose, onConfirm }) => {
 };
 
 // --- Componente de Navegación Lateral (Sidebar) ---
-const AdminSidebar = ({ activeModule, setActiveModule, modules }) => {
+const AdminSidebar = ({ activeModule, setActiveModule, modules, hasLoggedBefore }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const navigate = useNavigate();
@@ -124,25 +124,31 @@ const AdminSidebar = ({ activeModule, setActiveModule, modules }) => {
 
                 {/* Lista de Módulos */}
                 <ul className="space-y-3">
-                    {modules.map((module) => (
-                        <li key={module.name}>
-                            <button
-                                onClick={() => { 
-                                    setActiveModule(module.name);
-                                    setIsOpen(false); // Cierra el menú en móvil al seleccionar
-                                }}
-                                className={`w-full text-left flex items-center p-3 rounded-xl transition duration-300 font-medium 
-                                    ${activeModule === module.name 
-                                        ? `${COLORS.accent.replace('bg-', 'bg-')} ${COLORS.textDark}`
-                                        : 'hover:bg-[#004488] text-gray-200'
-                                    }
-                                `}
-                            >
-                                <module.icon className={`w-5 h-5 mr-3 ${activeModule === module.name ? COLORS.textDark : 'text-[#FFD700]'}`} />
-                                {module.name}
-                            </button>
-                        </li>
-                    ))}
+                    {modules.map((module) => {
+                        const disabled = !hasLoggedBefore && module.name !== 'Administración de Contraseñas';
+                        return (
+                            <li key={module.name}>
+                                <button
+                                    onClick={() => {
+                                        if (disabled) return; // bloquea navegación
+                                        setActiveModule(module.name);
+                                        setIsOpen(false); // Cierra el menú en móvil al seleccionar
+                                    }}
+                                    className={`w-full text-left flex items-center p-3 rounded-xl transition duration-300 font-medium 
+                                        ${activeModule === module.name 
+                                            ? `${COLORS.accent.replace('bg-', 'bg-')} ${COLORS.textDark}`
+                                            : 'hover:bg-[#004488] text-gray-200'
+                                        }
+                                        ${disabled ? 'opacity-50 cursor-not-allowed hover:bg-transparent' : ''}
+                                    `}
+                                    title={disabled ? 'Debe cambiar su contraseña antes de continuar' : module.name}
+                                >
+                                    <module.icon className={`w-5 h-5 mr-3 ${activeModule === module.name ? COLORS.textDark : 'text-[#FFD700]'}`} />
+                                    {module.name}
+                                </button>
+                            </li>
+                        );
+                    })}
                 </ul>
                 
                 {/* Botón de Salida (Logout) */}
@@ -191,6 +197,7 @@ const ModuleCard = ({ icon: Icon, title, description, delay, onClick }) => (
 // --- Componente Principal (AdminHome) ---
 const AdminHome = () => {
     const [activeModule, setActiveModule] = useState('Dashboard'); // Módulo inicial
+    const [hasLoggedBefore, setHasLoggedBefore] = useState(true); // controla navegación
     const navigate = useNavigate();
 
     // Verificar si el usuario ya inició sesión antes; si no, forzar pantalla de cambio de contraseña
@@ -224,17 +231,18 @@ const AdminHome = () => {
 
                 // La API puede devolver true/false directo o en un objeto { hasLoggedBefore: true }
                 const data = await res.json().catch(() => null);
-                let hasLoggedBefore = false;
-                if (typeof data === 'boolean') hasLoggedBefore = data;
-                else if (data && typeof data.hasLoggedBefore === 'boolean') hasLoggedBefore = data.hasLoggedBefore;
-                else if (data && typeof data.value === 'boolean') hasLoggedBefore = data.value;
-                else if (data === 'true' || data === 'false') hasLoggedBefore = data === 'true';
+                let value = false;
+                if (typeof data === 'boolean') value = data;
+                else if (data && typeof data.hasLoggedBefore === 'boolean') value = data.hasLoggedBefore;
+                else if (data && typeof data.value === 'boolean') value = data.value;
+                else if (data === 'true' || data === 'false') value = data === 'true';
 
-                if (!hasLoggedBefore) {
-                    // Forzar vista de cambio de contraseña
+                setHasLoggedBefore(value); // actualiza control de navegación
+
+                if (!value) {
+                    // Forzar vista de cambio de contraseña y bloquear navegación
                     setActiveModule('Administración de Contraseñas');
                 }
-                // si es true, mantener flujo normal (Dashboard u otro)
             } catch (err) {
                 if (err.name !== 'AbortError') console.error('fetch has-logged-before failed:', err);
             }
@@ -307,6 +315,7 @@ const AdminHome = () => {
                 activeModule={activeModule} 
                 setActiveModule={setActiveModule} 
                 modules={modules}
+                hasLoggedBefore={hasLoggedBefore}
             />
 
             {/* 2. Área de Contenido Principal */}
@@ -368,7 +377,7 @@ const AdminHome = () => {
                 {activeModule === 'Gestión de Cuentas' && <GestionCuentas />}
 
                 {/* Componente Administración de Contraseñas */}
-                {activeModule === 'Administración de Contraseñas' && <GestionContrasenas />}
+                {activeModule === 'Administración de Contraseñas' && <GestionContrasenas setHasLoggedBefore={setHasLoggedBefore} />}
                 
                 {/* 5. Vista de Métricas Rápidas (Solo en Dashboard) */}
                 {activeModule === 'Dashboard' && (
