@@ -377,32 +377,31 @@ const LoginModal = ({ isOpen, closeModal, onLoginSuccess }) => {
     setForgotPasswordError('');
 
     try {
-      // Nuevo flujo: pedir al backend que verifique si el correo existe y envíe el código.
-      // Endpoint sugerido: POST /api/register/request-password-reset  (body: { correo })
-      const response = await fetch('http://localhost:3000/api/register/request-password-reset', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ correo: forgotPasswordEmail })
-      });
+        // Verificar si el correo existe y enviar el código
+        const response = await fetch('http://localhost:3000/user/verify-email', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ correo: forgotPasswordEmail })
+        });
 
-      const data = await response.json();
+        const data = await response.json();
 
-      if (response.ok) {
-        // Si el backend confirma que el correo está registrado y envió el código
-        setShowRecoveryVerification(true);
-        console.log('✅ Código de recuperación enviado');
-      } else {
-        // Mostrar el mensaje que venga del backend (por ejemplo: 'Correo no registrado')
-        setForgotPasswordError(data.message || 'No se pudo enviar el código.');
-        console.log('❌ Error al solicitar recuperación:', data);
-      }
+        if (response.ok) {
+            // Si el backend confirma que el correo está registrado y envió el código
+            setShowRecoveryVerification(true);
+            console.log('✅ Código de recuperación enviado');
+        } else {
+            // Mostrar el mensaje que venga del backend
+            setForgotPasswordError(data.message || 'No se pudo enviar el código.');
+            console.log('❌ Error al solicitar recuperación:', data);
+        }
     } catch (error) {
-      console.error('Error en recuperación:', error);
-      setForgotPasswordError('Error de conexión con el servidor');
+        console.error('Error en recuperación:', error);
+        setForgotPasswordError('Error de conexión con el servidor');
     } finally {
-      setForgotPasswordLoading(false);
+        setForgotPasswordLoading(false);
     }
   };
 
