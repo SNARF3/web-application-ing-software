@@ -4,7 +4,7 @@ import {
   LogIn, UserPlus, Zap, CheckCircle, TrendingUp, BookOpen, Star, MessageCircle, 
   ShieldCheck, Award, TrendingDown, Layers, Laptop, School, Eye, EyeOff, Loader2,
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom'; // Importar useNavigate
 import LoginModal from './LoginModal';
 
 // Colores institucionales y tema oscuro para el dinamismo
@@ -147,8 +147,8 @@ const Header = ({ scrollToSection, openLoginModal, openRegisterModal, openUcbExp
             alt="Logo UCB" 
             className="w-24 h-24 object-contain" 
           />
-          <span className={`text-2xl font-extrabold whitespace-nowrap ${COLORS.textLight}`}>
-            UNIVERSIDAD CATÓLICA <span className="text-[#FFD700]">SAN PABLO</span>
+          <span className={`text-2xl font-extrabold whitespace-nowrap ${COLORS.textLight.replace('text-', 'text-')}`}>
+            UNIVERSIDAD CATÓLICA <span className={COLORS.accent.replace('bg-', 'text-')}>SAN PABLO</span>
           </span>
         </div>
 
@@ -158,12 +158,17 @@ const Header = ({ scrollToSection, openLoginModal, openRegisterModal, openUcbExp
             <button
               key={item.name}
               className={`transition duration-300 font-medium tracking-wider transform hover:scale-105 ${COLORS.textLight} hover:text-[#FFD700] hover:border-b-4 hover:border-[#FFD700] py-1 cursor-pointer`}
-              onClick={() => scrollToSection(item.page)}
+              onClick={() => {
+                if (item.page === 'ucbexm') {
+                  window.location.hash = '#ucbexm';
+                } else {
+                  scrollToSection(item.page);
+                }
+              }}
             >
               {item.name}
             </button>
           ))}
-          
           {/* Botón moderno gris para lanzar UCB-Explorer Manager */}
           <button
             onClick={openUcbExplorerManager}
@@ -171,68 +176,6 @@ const Header = ({ scrollToSection, openLoginModal, openRegisterModal, openUcbExp
           >
             UCB-Explorer Manager
           </button>
-
-          {/* Enlaces de Acción condicionales basados en sesión */}
-          {!sessionStorage.getItem('token') ? (
-            <>
-              <button
-                className={`bg-white hover:bg-gray-200 ${COLORS.textDark} font-bold py-2.5 px-6 rounded-full shadow-lg transition duration-300 transform hover:scale-105 flex items-center space-x-2`}
-                onClick={openRegisterModal}
-              >
-                <UserPlus className="w-5 h-5" />
-                <span>Regístrate</span>
-              </button>
-              <button
-                className={`${COLORS.accent} ${COLORS.hoverAccent} ${COLORS.textDark} font-bold py-2.5 px-6 rounded-full shadow-lg transition duration-300 transform hover:scale-105 flex items-center space-x-2 border-2 border-transparent hover:border-[#003366]`}
-                onClick={openLoginModal}
-              >
-                <LogIn className="w-5 h-5" />
-                <span>Log In</span>
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={async () => {
-                try {
-                  // Registrar cierre de sesión manual (registro individual con usuario actual)
-                  const userStr = sessionStorage.getItem('user');
-                  let userObj = null;
-                  try { userObj = userStr ? JSON.parse(userStr) : null; } catch (e) { userObj = null; }
-                  const token = sessionStorage.getItem('token');
-                  const payload = { tipo_log: 2, fechahora: new Date().toISOString() };
-                  // id_usuario requerido por backend
-                  payload.id_usuario = userObj ? (userObj.id || userObj.id_usuario || 0) : 0;
-                  if (userObj) {
-                    payload.nombre_usuario = userObj.nombre || userObj.nombre_usuario || userObj.correo || '';
-                    payload.apellido_usuario = userObj.apellido || userObj.apellido_usuario || '';
-                    payload.nombre_rol = userObj.rol || userObj.nombre_rol || '';
-                  }
-                  const res = await fetch('http://localhost:3000/logs', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-                    body: JSON.stringify(payload)
-                  });
-                  if (!res.ok) {
-                    const txt = await res.text().catch(() => '');
-                    console.error('Log API responded with', res.status, txt);
-                  }
-                  // Limpiar sesión
-                  sessionStorage.clear();
-                  // Redirigir a inicio
-                  window.location.href = '/';
-                } catch (err) {
-                  console.error('Error al registrar log de cierre de sesión:', err);
-                  // Limpiar sesión de todas formas
-                  sessionStorage.clear();
-                  window.location.href = '/';
-                }
-              }}
-              className={`${COLORS.accent} ${COLORS.hoverAccent} ${COLORS.textDark} font-bold py-2.5 px-6 rounded-full shadow-lg transition duration-300 transform hover:scale-105 flex items-center space-x-2 border-2 border-transparent hover:border-[#003366]`}
-            >
-              <LogIn className="w-5 h-5" />
-              <span>Cerrar Sesión</span>
-            </button>
-          )}
         </nav>
 
         {/* Mobile Menu Button */}
@@ -240,7 +183,7 @@ const Header = ({ scrollToSection, openLoginModal, openRegisterModal, openUcbExp
           className="md:hidden p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-white"
           onClick={() => setIsOpen(!isOpen)}
         >
-          {isOpen ? <X className="text-white w-6 h-6" /> : <Menu className="text-white w-6 h-6" />}
+          {isOpen ? <X className={`${COLORS.textLight.replace('text-', 'text-')} w-6 h-6`} /> : <Menu className={`${COLORS.textLight.replace('text-', 'text-')} w-6 h-6`} />}
         </button>
       </div>
 
@@ -250,16 +193,16 @@ const Header = ({ scrollToSection, openLoginModal, openRegisterModal, openUcbExp
           {navItems.map((item) => (
             <button
               key={item.name}
-              className={`block px-4 py-3 hover:bg-[#004488] transition duration-200 w-full text-left text-lg text-white`}
+              className={`block px-4 py-3 hover:bg-[#004488] transition duration-200 w-full text-left text-lg ${COLORS.textLight}`}
               onClick={() => { 
-                scrollToSection(item.page);
+                if (item.page === 'ucbexm') { window.location.hash = '#ucbexm'; } 
+                else { scrollToSection(item.page); }
                 setIsOpen(false); 
               }} 
             >
               {item.name}
             </button>
           ))}
-          
           {/* Botón UCB-Explorer Manager en móvil */}
           <div className="px-4 py-3">
             <button
@@ -269,70 +212,7 @@ const Header = ({ scrollToSection, openLoginModal, openRegisterModal, openUcbExp
               UCB-Explorer Manager
             </button>
           </div>
-          
-          <div className="px-4 pt-4 space-y-3">
-            {!sessionStorage.getItem('token') ? (
-              <>
-                <button
-                  className={`bg-white w-full hover:bg-gray-200 ${COLORS.textDark} font-bold py-3 rounded-lg transition duration-300 flex items-center justify-center space-x-2`}
-                  onClick={() => { openRegisterModal(); setIsOpen(false); }}
-                >
-                  <UserPlus className="w-5 h-5" />
-                  <span>Regístrate</span>
-                </button>
-                <button
-                  className={`${COLORS.accent} w-full ${COLORS.hoverAccent} ${COLORS.textDark} font-bold py-3 rounded-lg transition duration-300 flex items-center justify-center space-x-2`}
-                  onClick={() => { openLoginModal(); setIsOpen(false); }}
-                >
-                  <LogIn className="w-5 h-5" />
-                  <span>Log In</span>
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={async () => {
-                  try {
-                    // Registrar cierre de sesión manual (registro individual con usuario actual)
-                    const userStr = sessionStorage.getItem('user');
-                    let userObj = null;
-                    try { userObj = userStr ? JSON.parse(userStr) : null; } catch (e) { userObj = null; }
-                    const token = sessionStorage.getItem('token');
-                    const payload = { tipo_log: 2, fechahora: new Date().toISOString() };
-                    // id_usuario requerido por backend
-                    payload.id_usuario = userObj ? (userObj.id || userObj.id_usuario || 0) : 0;
-                    if (userObj) {
-                      payload.nombre_usuario = userObj.nombre || userObj.nombre_usuario || userObj.correo || '';
-                      payload.apellido_usuario = userObj.apellido || userObj.apellido_usuario || '';
-                      payload.nombre_rol = userObj.rol || userObj.nombre_rol || '';
-                    }
-                    const res2 = await fetch('http://localhost:3000/logs', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-                      body: JSON.stringify(payload)
-                    });
-                    if (!res2.ok) {
-                      const txt2 = await res2.text().catch(() => '');
-                      console.error('Log API responded with', res2.status, txt2);
-                    }
-                    // Limpiar sesión
-                    sessionStorage.clear();
-                    // Redirigir a inicio
-                    window.location.href = '/';
-                  } catch (err) {
-                    console.error('Error al registrar log de cierre de sesión:', err);
-                    // Limpiar sesión de todas formas
-                    sessionStorage.clear();
-                    window.location.href = '/';
-                  }
-                  setIsOpen(false);
-                }}
-                className={`${COLORS.accent} w-full ${COLORS.hoverAccent} ${COLORS.textDark} font-bold py-3 rounded-lg transition duration-300 flex items-center justify-center space-x-2`}
-              >
-                <LogIn className="w-5 h-5" />
-                <span>Cerrar Sesión</span>
-              </button>
-            )}
-          </div>
+          {/* Botones de registro y login eliminados en mobile */}
         </div>
       )}
     </header>
@@ -346,9 +226,9 @@ const AdvantageCard = ({ icon: Icon, title, description, delay }) => (
     style={{ animationDelay: `${delay}s` }}
   >
     <div className={`bg-gray-100 p-4 rounded-full inline-flex mb-4 transition duration-300 group-hover:bg-[#FFD700] group-hover:shadow-2xl`}>
-      <Icon className={`w-8 h-8 ${COLORS.textDark} transition duration-300 group-hover:text-black`} />
+      <Icon className={`w-8 h-8 ${COLORS.textDark.replace('text-', 'text-')} transition duration-300 group-hover:text-black`} />
     </div>
-    <h3 className={`text-xl font-bold mb-3 ${COLORS.textDark} group-hover:text-black transition duration-200`}>{title}</h3>
+    <h3 className={`text-xl font-bold mb-3 ${COLORS.textDark.replace('text-', 'text-')} group-hover:text-black transition duration-200`}>{title}</h3>
     <p className="text-gray-600 group-hover:text-gray-800 transition duration-200">{description}</p>
   </div>
 );
@@ -547,10 +427,8 @@ const Footer = () => (
 // --- Componente Principal Exportado (UCBHome) ---
 const UCBHome = () => {
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [showRegisterModal, setShowRegisterModal] = useState(false);
-  const [showAllNewsModal, setShowAllNewsModal] = useState(false);
-  const navigate = useNavigate();
-
+  const navigate = useNavigate(); // Hook para navegación
+  
   // Función para manejar scroll suave
   const scrollToSection = (sectionId) => {
     const element = document.getElementById(sectionId);
@@ -563,115 +441,24 @@ const UCBHome = () => {
   const handleLoginSuccess = (userData) => {
     console.log('Login exitoso:', userData);
     setShowLoginModal(false);
+    // Aquí puedes agregar más lógica post-login si es necesario
   };
 
   // Función para abrir UCB-Explorer Manager (redirige a Home.jsx)
-  const openUcbExplorerManager = async () => {
+  const openUcbExplorerManager = () => {
     console.log('Redirigiendo a UCB-Explorer Manager...');
-    // Verificar si hay token activo
-    const token = sessionStorage.getItem('token');
-    if (!token) {
-      // Registrar intento de acceso no autorizado (registro individual sin usuario autenticado)
-      try {
-        const userStr = sessionStorage.getItem('user');
-        let userObj = null;
-        try { userObj = userStr ? JSON.parse(userStr) : null; } catch (e) { userObj = null; }
-        const payload = { tipo_log: 4, fechahora: new Date().toISOString() };
-        // id_usuario requerido por backend
-        payload.id_usuario = userObj ? (userObj.id || userObj.id_usuario || 0) : 0;
-        if (userObj) {
-          payload.nombre_usuario = userObj.nombre || userObj.nombre_usuario || userObj.correo || '';
-          payload.apellido_usuario = userObj.apellido || userObj.apellido_usuario || '';
-          payload.nombre_rol = userObj.rol || userObj.nombre_rol || '';
-        }
-        await fetch('http://localhost:3000/logs', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload) // Acceso no autorizado
-        });
-      } catch (err) {
-        console.error('Error al registrar log de acceso no autorizado:', err);
-      }
-      // Mostrar modal de login
-      setShowLoginModal(true);
-      return;
-    }
-    navigate('/UCB-Explorer-Manager');
+    navigate('/UCB-Explorer-Manager'); // Redirige a la ruta de Home.jsx
   };
 
-  // Funciones para otros modales
+  // Funciones para otros modales (placeholder)
   const openRegisterModal = () => {
     console.log('Abrir modal de registro');
-    setShowRegisterModal(true);
+    // Aquí puedes implementar la lógica para abrir el modal de registro
   };
 
   const openAllNewsModal = () => {
     console.log('Abrir todas las noticias');
-    setShowAllNewsModal(true);
-  };
-
-  // Noticias extendidas
-  const expandedNews = [
-    { title: 'Lanzamiento del Laboratorio de Inteligencia Artificial', date: '22 Octubre, 2025', excerpt: 'Nuevo laboratorio en la Sede Central para impulsar investigación y proyectos con empresas locales.' },
-    { title: 'Convocatoria: Becas de Excelencia Académica 2026', date: '15 Octubre, 2025', excerpt: 'Postulaciones abiertas para estudiantes destacados con cobertura parcial y total.' },
-    { title: 'Feria Vocacional UCB 2025', date: '01 Octubre, 2025', excerpt: 'Más de 70 colegios invitados para conocer carreras y becas disponibles.' },
-    { title: 'Convenio Internacional con Universidad de Salamanca', date: '20 Septiembre, 2025', excerpt: 'Programa de movilidad docente y estudiantil para el próximo año académico.' },
-    { title: 'Publicación: Reporte Anual de Investigación 2024-2025', date: '05 Septiembre, 2025', excerpt: 'Resumen de proyectos destacados y su impacto social en la región.' },
-    { title: 'Implementación de Autenticación Multifactor', date: '10 Agosto, 2025', excerpt: 'Aumentamos la seguridad en accesos institucionales para proteger datos de estudiantes y personal.' },
-    { title: 'Capacitación Docente en Metodologías Híbridas', date: '22 Julio, 2025', excerpt: 'Cursos y certificaciones para mejorar la enseñanza presencial y online.' },
-  ];
-
-  // Componente Modal para Registro
-  const RegisterModal = ({ isOpen, closeModal }) => {
-    const [name, setName] = useState('');
-    const [email, setEmail] = useState('');
-    
-    if (!isOpen) return null;
-    
-    return (
-      <div className="fixed inset-0 bg-gray-900 bg-opacity-80 z-[100] flex items-center justify-center">
-        <div className="bg-white rounded-2xl w-full max-w-md p-0 shadow-2xl border-t-8 border-[#FFD700]">
-          <div className={`${COLORS.primary} p-6 rounded-t-xl`}>
-            <h3 className="text-2xl font-bold text-white flex items-center">
-              <UserPlus className="w-6 h-6 mr-3 text-[#FFD700]" />
-              Registro UCB
-            </h3>
-          </div>
-          <div className="p-6">
-            <form onSubmit={(e) => { e.preventDefault(); console.log('Register', { name, email }); closeModal(); }}>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nombre completo</label>
-              <input value={name} onChange={(e) => setName(e.target.value)} required className="w-full p-3 border border-gray-300 rounded-lg mb-4" />
-              <label className="block text-sm font-medium text-gray-700 mb-1">Correo institucional</label>
-              <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" required className="w-full p-3 border border-gray-300 rounded-lg mb-4" />
-              <button type="submit" className={`${COLORS.accent} ${COLORS.hoverAccent} w-full ${COLORS.textDark} font-black py-3 rounded-lg shadow-xl`}>Crear cuenta</button>
-            </form>
-            <div className="mt-4 text-center text-sm">
-              <button onClick={closeModal} className="text-[#003366] underline">Cancelar</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // Componente Modal para Todas las Noticias
-  const AllNewsModal = ({ isOpen, closeModal, news }) => {
-    if (!isOpen) return null;
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-60 z-[110] flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl w-full max-w-3xl p-6 shadow-2xl overflow-auto max-h-[80vh]">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-2xl font-bold text-[#003366]">Centro de Anuncios — Noticias UCB</h3>
-            <button onClick={closeModal} className="text-gray-500 hover:text-[#003366]"><X className="w-6 h-6" /></button>
-          </div>
-          <div className="space-y-4">
-            {news.map((n, i) => (
-              <NewsCard key={i} {...n} />
-            ))}
-          </div>
-        </div>
-      </div>
-    );
+    // Aquí puedes implementar la lógica para mostrar todas las noticias
   };
 
   return (
@@ -682,10 +469,11 @@ const UCBHome = () => {
         scrollToSection={scrollToSection}
         openLoginModal={() => setShowLoginModal(true)}
         openRegisterModal={openRegisterModal}
-        openUcbExplorerManager={openUcbExplorerManager}
+        openUcbExplorerManager={openUcbExplorerManager} // Cambiado el nombre
       />
 
       <main className="pt-20"> 
+
         {/* 2. SECCIÓN PRINCIPAL: Hero / Bienvenida */}
         <section 
             id="hero" 
@@ -736,7 +524,7 @@ const UCBHome = () => {
         {/* 3. SECCIÓN: Acerca de Nosotros (Historia, Misión y Visión) */}
         <section id="about" className="py-20 bg-white">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                <h2 className={`text-4xl md:text-5xl font-extrabold text-center mb-16 ${COLORS.textDark}`}>
+                <h2 className={`text-4xl md:text-5xl font-extrabold text-center mb-16 ${COLORS.textDark.replace('text-', 'text-')}`}>
                     <span className="text-[#FFD700]">Acerca</span> de Nosotros
                 </h2>
                 
@@ -791,7 +579,7 @@ const UCBHome = () => {
         {/* 4. SECCIÓN: Productos o Servicios (Oferta Académica) */}
         <section id="services" className={`py-20 ${COLORS.primary} bg-opacity-95`}>
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                <h2 className={`text-4xl md:text-5xl font-extrabold text-center mb-4 ${COLORS.textLight}`}>
+                <h2 className={`text-4xl md:text-5xl font-extrabold text-center mb-4 ${COLORS.textLight.replace('text-', 'text-')}`}>
                     Nuestra <span className="text-[#FFD700]">Oferta Académica</span>
                 </h2>
                 <p className="text-xl text-gray-300 text-center mb-16 max-w-3xl mx-auto">
@@ -805,7 +593,7 @@ const UCBHome = () => {
                             key={index}
                             className="p-6 bg-white rounded-2xl shadow-xl border-t-8 border-[#FFD700] text-center transform hover:scale-[1.02] transition duration-300"
                         >
-                            <service.icon className={`w-12 h-12 mx-auto mb-4 ${COLORS.textDark}`} />
+                            <service.icon className={`w-12 h-12 mx-auto mb-4 ${COLORS.textDark.replace('text-', 'text-')}`} />
                             <h3 className="text-2xl font-bold mb-3 text-[#003366]">{service.title}</h3>
                             <p className="text-gray-700">{service.description}</p>
                         </div>
@@ -829,7 +617,7 @@ const UCBHome = () => {
         {/* 5. SECCIÓN: Noticias o Novedades */}
         <section id="news" className="py-20 bg-gray-100">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                <h2 className={`text-4xl md:text-5xl font-extrabold text-center mb-4 ${COLORS.textDark}`}>
+                <h2 className={`text-4xl md:text-5xl font-extrabold text-center mb-4 ${COLORS.textDark.replace('text-', 'text-')}`}>
                     Últimas <span className="text-[#FFD700]">Novedades</span>
                 </h2>
                 <p className="text-xl text-gray-600 text-center mb-16 max-w-3xl mx-auto">
@@ -858,22 +646,11 @@ const UCBHome = () => {
 
       </main>
 
-      {/* Modales */}
+      {/* Modal de Login */}
       <LoginModal 
         isOpen={showLoginModal}
         closeModal={() => setShowLoginModal(false)}
         onLoginSuccess={handleLoginSuccess}
-      />
-      
-      <RegisterModal 
-        isOpen={showRegisterModal}
-        closeModal={() => setShowRegisterModal(false)}
-      />
-      
-      <AllNewsModal 
-        isOpen={showAllNewsModal}
-        closeModal={() => setShowAllNewsModal(false)}
-        news={expandedNews}
       />
     </div>
   );

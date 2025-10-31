@@ -123,14 +123,6 @@ const Header = ({ openLoginModal, openRegisterModal, currentPage, setCurrentPage
               Home
             </button>
 
-            {/* Registrarte (estilo secundario) */}
-            <button
-              onClick={openRegisterModal}
-              className={`text-white font-bold py-2 px-4 rounded-full transition duration-300 transform hover:scale-105 border-2 border-white bg-white/0 hover:bg-white/10`}
-            >
-              Registrarte
-            </button>
-
             {/* Acceder (estilo primario) */}
             <button
               className={`${COLORS.accent} ${COLORS.hoverAccent} ${COLORS.textDark} font-bold py-2.5 px-6 rounded-full shadow-lg transition duration-300 transform hover:scale-105 flex items-center space-x-2 border-2 border-transparent hover:border-[#003366]`}
@@ -169,12 +161,6 @@ const Header = ({ openLoginModal, openRegisterModal, currentPage, setCurrentPage
           ))}
 
           <div className="px-4 pt-2 space-y-2">
-            <button
-              className={`w-full text-center text-white font-bold py-3 rounded-lg transition duration-300`}
-              onClick={() => { openRegisterModal(); setIsOpen(false); }}
-            >
-              Registrarte
-            </button>
             <button
               className={`${COLORS.accent} w-full ${COLORS.hoverAccent} ${COLORS.textDark} font-bold py-3 rounded-lg transition duration-300 flex items-center justify-center space-x-2`}
               onClick={() => { openLoginModal(); setIsOpen(false); }} 
