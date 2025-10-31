@@ -186,23 +186,13 @@ const Header = ({ scrollToSection, openLoginModal, openRegisterModal, openUcbExp
             <UserPlus className="w-5 h-5" />
             <span>Regístrate</span>
           </button>
-          {!isAuthenticated ? (
-            <button
-              className={`${COLORS.accent} ${COLORS.hoverAccent} ${COLORS.textDark} font-bold py-2.5 px-6 rounded-full shadow-lg transition duration-300 transform hover:scale-105 flex items-center space-x-2 border-2 border-transparent hover:border-[#003366]`}
-              onClick={openLoginModal}
-            >
-              <LogIn className="w-5 h-5" />
-              <span>Log In</span>
-            </button>
-          ) : (
-            <button
-              className={`bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-6 rounded-full shadow-lg transition duration-300 transform hover:scale-105 flex items-center space-x-2`}
-              onClick={onLogout}
-            >
-              <X className="w-5 h-5" />
-              <span>Cerrar sesión</span>
-            </button>
-          )}
+          <button
+            className={`${COLORS.accent} ${COLORS.hoverAccent} ${COLORS.textDark} font-bold py-2.5 px-6 rounded-full shadow-lg transition duration-300 transform hover:scale-105 flex items-center space-x-2 border-2 border-transparent hover:border-[#003366]`}
+            onClick={openLoginModal}
+          >
+            <LogIn className="w-5 h-5" />
+            <span>Log In</span>
+          </button>
         </nav>
 
         {/* Mobile Menu Button */}
@@ -247,23 +237,13 @@ const Header = ({ scrollToSection, openLoginModal, openRegisterModal, openUcbExp
                 <UserPlus className="w-5 h-5" />
                 <span>Regístrate</span>
               </button>
-            {!isAuthenticated ? (
-              <button
-                className={`${COLORS.accent} w-full ${COLORS.hoverAccent} ${COLORS.textDark} font-bold py-3 rounded-lg transition duration-300 flex items-center justify-center space-x-2`}
-                onClick={() => { openLoginModal(); setIsOpen(false); }} 
-              >
-                <LogIn className="w-5 h-5" />
-                <span>Log In</span>
-              </button>
-            ) : (
-              <button
-                className={`bg-red-600 w-full text-white font-bold py-3 rounded-lg transition duration-300 flex items-center justify-center space-x-2`}
-                onClick={() => { onLogout(); setIsOpen(false); }}
-              >
-                <X className="w-5 h-5" />
-                <span>Cerrar sesión</span>
-              </button>
-            )}
+            <button
+              className={`${COLORS.accent} w-full ${COLORS.hoverAccent} ${COLORS.textDark} font-bold py-3 rounded-lg transition duration-300 flex items-center justify-center space-x-2`}
+              onClick={() => { openLoginModal(); setIsOpen(false); }} 
+            >
+              <LogIn className="w-5 h-5" />
+              <span>Log In</span>
+            </button>
           </div>
         </div>
       )}
