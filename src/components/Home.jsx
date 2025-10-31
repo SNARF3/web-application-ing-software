@@ -92,49 +92,53 @@ const Header = ({ openLoginModal, openRegisterModal, currentPage, setCurrentPage
         </div>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center space-x-4">
-          {navItems.map((item) => (
+        <nav className="hidden md:flex items-center">
+          <div className="flex items-center space-x-4 mr-8">
+            {navItems.map((item) => (
+              <button
+                key={item.name}
+                className={`transition duration-300 font-medium text-lg tracking-wider transform hover:scale-105 ${
+                  currentPage === item.page 
+                    ? 'text-[#FFD700] border-b-4 border-[#FFD700] pb-1' 
+                    : `${COLORS.textLight} hover:text-[#FFD700]`
+                } py-1 cursor-pointer`}
+                onClick={() => setCurrentPage(item.page)}
+              >
+                {item.name}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center space-x-4 border-l pl-8 border-gray-600">
+            {/* Botón Home */}
             <button
-              key={item.name}
-              className={`transition duration-300 font-medium text-lg tracking-wider transform hover:scale-105 ${
-                currentPage === item.page 
-                  ? 'text-[#FFD700] border-b-4 border-[#FFD700] pb-1' 
-                  : `${COLORS.textLight} hover:text-[#FFD700]`
-              } py-1 cursor-pointer`}
-              onClick={() => setCurrentPage(item.page)}
+              onClick={() => {
+                window.location.href = '/';
+                setCurrentPage('Inicio');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className="bg-gray-200 text-[#003366] font-semibold py-2 px-4 rounded-full shadow-md transition duration-200 transform hover:scale-105"
             >
-              {item.name}
+              Home
             </button>
-          ))}
 
-          {/* Botón Home */}
-          <button
-            onClick={() => {
-              window.location.href = '/';
-              setCurrentPage('Inicio');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-            className="bg-gray-200 text-[#003366] font-semibold py-2 px-4 rounded-full shadow-md transition duration-200 transform hover:scale-105"
-          >
-            Home
-          </button>
+            {/* Registrarte (estilo secundario) */}
+            <button
+              onClick={openRegisterModal}
+              className={`text-white font-bold py-2 px-4 rounded-full transition duration-300 transform hover:scale-105 border-2 border-white bg-white/0 hover:bg-white/10`}
+            >
+              Registrarte
+            </button>
 
-          {/* Registrarte (estilo secundario) */}
-          <button
-            onClick={openRegisterModal}
-            className={`text-white font-bold py-2 px-4 rounded-full transition duration-300 transform hover:scale-105 border-2 border-white bg-white/0 hover:bg-white/10`}
-          >
-            Registrarte
-          </button>
-
-          {/* Acceder (estilo primario) */}
-          <button
-            className={`${COLORS.accent} ${COLORS.hoverAccent} ${COLORS.textDark} font-bold py-2.5 px-6 rounded-full shadow-lg transition duration-300 transform hover:scale-105 flex items-center space-x-2 border-2 border-transparent hover:border-[#003366]`}
-            onClick={openLoginModal} 
-          >
-            <LogIn className="w-5 h-5" />
-            <span>Acceder</span>
-          </button>
+            {/* Acceder (estilo primario) */}
+            <button
+              className={`${COLORS.accent} ${COLORS.hoverAccent} ${COLORS.textDark} font-bold py-2.5 px-6 rounded-full shadow-lg transition duration-300 transform hover:scale-105 flex items-center space-x-2 border-2 border-transparent hover:border-[#003366]`}
+              onClick={openLoginModal} 
+            >
+              <LogIn className="w-5 h-5" />
+              <span>Acceder</span>
+            </button>
+          </div>
         </nav>
 
         {/* Mobile Menu Button */}
