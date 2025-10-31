@@ -182,14 +182,30 @@ const GestionContrasenas = () => {
                 type: 'success', 
                 text: 'Contraseña actualizada con éxito! Por favor, mantenga su cuenta segura.' 
             });
-            // Enviar log tipo 5 (Cambio de contraseña) usando endpoint bulk
+            // Enviar log tipo 5 (Cambio de contraseña) - registro individual con usuario
             (async () => {
                 try {
-                    await fetch('http://localhost:3000/logs/bulk', {
+                    const userStr = sessionStorage.getItem('user');
+                    let userObj = null;
+                    try { userObj = userStr ? JSON.parse(userStr) : null; } catch (e) { userObj = null; }
+                    const token = sessionStorage.getItem('token');
+                    const payload = { tipo_log: 10, fechahora: new Date().toISOString() }; // cambio de contraseña -> tipo 10 según LOG_TYPES
+                    // id_usuario es requerido por el backend; usar 0 si no está disponible
+                    payload.id_usuario = userObj ? (userObj.id || userObj.id_usuario || 0) : 0;
+                    if (userObj) {
+                        payload.nombre_usuario = userObj.nombre || userObj.nombre_usuario || userObj.correo || '';
+                        payload.apellido_usuario = userObj.apellido || userObj.apellido_usuario || '';
+                        payload.nombre_rol = userObj.rol || userObj.nombre_rol || '';
+                    }
+                    const resp = await fetch('http://localhost:3000/logs', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ tipo_log: 5 }),
+                        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                        body: JSON.stringify(payload),
                     });
+                    if (!resp.ok) {
+                        const txt = await resp.text().catch(() => '');
+                        console.error('Log API responded with', resp.status, txt);
+                    }
                 } catch (err) {
                     console.error('Error enviando log de cambio de contraseña:', err);
                 }

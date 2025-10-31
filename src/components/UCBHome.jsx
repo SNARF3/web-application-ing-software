@@ -178,21 +178,67 @@ const Header = ({ scrollToSection, openLoginModal, openRegisterModal, openUcbExp
             UCB-Explorer Manager
           </button>
 
-          {/* Enlaces de Acción (Regístrate / Log In) - ahora funcionales */}
-          <button
-            className={`bg-white hover:bg-gray-200 ${COLORS.textDark} font-bold py-2.5 px-6 rounded-full shadow-lg transition duration-300 transform hover:scale-105 flex items-center space-x-2`}
-            onClick={openRegisterModal}
-          >
-            <UserPlus className="w-5 h-5" />
-            <span>Regístrate</span>
-          </button>
-          <button
-            className={`${COLORS.accent} ${COLORS.hoverAccent} ${COLORS.textDark} font-bold py-2.5 px-6 rounded-full shadow-lg transition duration-300 transform hover:scale-105 flex items-center space-x-2 border-2 border-transparent hover:border-[#003366]`}
-            onClick={openLoginModal}
-          >
-            <LogIn className="w-5 h-5" />
-            <span>Log In</span>
-          </button>
+          {/* Enlaces de Acción condicionales basados en sesión */}
+          {!sessionStorage.getItem('token') ? (
+            <>
+              <button
+                className={`bg-white hover:bg-gray-200 ${COLORS.textDark} font-bold py-2.5 px-6 rounded-full shadow-lg transition duration-300 transform hover:scale-105 flex items-center space-x-2`}
+                onClick={openRegisterModal}
+              >
+                <UserPlus className="w-5 h-5" />
+                <span>Regístrate</span>
+              </button>
+              <button
+                className={`${COLORS.accent} ${COLORS.hoverAccent} ${COLORS.textDark} font-bold py-2.5 px-6 rounded-full shadow-lg transition duration-300 transform hover:scale-105 flex items-center space-x-2 border-2 border-transparent hover:border-[#003366]`}
+                onClick={openLoginModal}
+              >
+                <LogIn className="w-5 h-5" />
+                <span>Log In</span>
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={async () => {
+                try {
+                  // Registrar cierre de sesión manual (registro individual con usuario actual)
+                  const userStr = sessionStorage.getItem('user');
+                  let userObj = null;
+                  try { userObj = userStr ? JSON.parse(userStr) : null; } catch (e) { userObj = null; }
+                  const token = sessionStorage.getItem('token');
+                  const payload = { tipo_log: 2, fechahora: new Date().toISOString() };
+                  // id_usuario requerido por backend
+                  payload.id_usuario = userObj ? (userObj.id || userObj.id_usuario || 0) : 0;
+                  if (userObj) {
+                    payload.nombre_usuario = userObj.nombre || userObj.nombre_usuario || userObj.correo || '';
+                    payload.apellido_usuario = userObj.apellido || userObj.apellido_usuario || '';
+                    payload.nombre_rol = userObj.rol || userObj.nombre_rol || '';
+                  }
+                  const res = await fetch('http://localhost:3000/logs', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                    body: JSON.stringify(payload)
+                  });
+                  if (!res.ok) {
+                    const txt = await res.text().catch(() => '');
+                    console.error('Log API responded with', res.status, txt);
+                  }
+                  // Limpiar sesión
+                  sessionStorage.clear();
+                  // Redirigir a inicio
+                  window.location.href = '/';
+                } catch (err) {
+                  console.error('Error al registrar log de cierre de sesión:', err);
+                  // Limpiar sesión de todas formas
+                  sessionStorage.clear();
+                  window.location.href = '/';
+                }
+              }}
+              className={`${COLORS.accent} ${COLORS.hoverAccent} ${COLORS.textDark} font-bold py-2.5 px-6 rounded-full shadow-lg transition duration-300 transform hover:scale-105 flex items-center space-x-2 border-2 border-transparent hover:border-[#003366]`}
+            >
+              <LogIn className="w-5 h-5" />
+              <span>Cerrar Sesión</span>
+            </button>
+          )}
         </nav>
 
         {/* Mobile Menu Button */}
@@ -230,20 +276,67 @@ const Header = ({ scrollToSection, openLoginModal, openRegisterModal, openUcbExp
             </button>
           </div>
           <div className="px-4 pt-4 space-y-3">
-             <button
-                className={`bg-white w-full hover:bg-gray-200 ${COLORS.textDark} font-bold py-3 rounded-lg transition duration-300 flex items-center justify-center space-x-2`}
-                onClick={() => { openRegisterModal(); setIsOpen(false); }} 
+            {!sessionStorage.getItem('token') ? (
+              <>
+                <button
+                  className={`bg-white w-full hover:bg-gray-200 ${COLORS.textDark} font-bold py-3 rounded-lg transition duration-300 flex items-center justify-center space-x-2`}
+                  onClick={() => { openRegisterModal(); setIsOpen(false); }}
+                >
+                  <UserPlus className="w-5 h-5" />
+                  <span>Regístrate</span>
+                </button>
+                <button
+                  className={`${COLORS.accent} w-full ${COLORS.hoverAccent} ${COLORS.textDark} font-bold py-3 rounded-lg transition duration-300 flex items-center justify-center space-x-2`}
+                  onClick={() => { openLoginModal(); setIsOpen(false); }}
+                >
+                  <LogIn className="w-5 h-5" />
+                  <span>Log In</span>
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={async () => {
+                  try {
+                    // Registrar cierre de sesión manual (registro individual con usuario actual)
+                    const userStr = sessionStorage.getItem('user');
+                    let userObj = null;
+                    try { userObj = userStr ? JSON.parse(userStr) : null; } catch (e) { userObj = null; }
+                    const token = sessionStorage.getItem('token');
+                    const payload = { tipo_log: 2, fechahora: new Date().toISOString() };
+                    // id_usuario requerido por backend
+                    payload.id_usuario = userObj ? (userObj.id || userObj.id_usuario || 0) : 0;
+                    if (userObj) {
+                      payload.nombre_usuario = userObj.nombre || userObj.nombre_usuario || userObj.correo || '';
+                      payload.apellido_usuario = userObj.apellido || userObj.apellido_usuario || '';
+                      payload.nombre_rol = userObj.rol || userObj.nombre_rol || '';
+                    }
+                    const res2 = await fetch('http://localhost:3000/logs', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                      body: JSON.stringify(payload)
+                    });
+                    if (!res2.ok) {
+                      const txt2 = await res2.text().catch(() => '');
+                      console.error('Log API responded with', res2.status, txt2);
+                    }
+                    // Limpiar sesión
+                    sessionStorage.clear();
+                    // Redirigir a inicio
+                    window.location.href = '/';
+                  } catch (err) {
+                    console.error('Error al registrar log de cierre de sesión:', err);
+                    // Limpiar sesión de todas formas
+                    sessionStorage.clear();
+                    window.location.href = '/';
+                  }
+                  setIsOpen(false);
+                }}
+                className={`${COLORS.accent} w-full ${COLORS.hoverAccent} ${COLORS.textDark} font-bold py-3 rounded-lg transition duration-300 flex items-center justify-center space-x-2`}
               >
-                <UserPlus className="w-5 h-5" />
-                <span>Regístrate</span>
+                <LogIn className="w-5 h-5" />
+                <span>Cerrar Sesión</span>
               </button>
-            <button
-              className={`${COLORS.accent} w-full ${COLORS.hoverAccent} ${COLORS.textDark} font-bold py-3 rounded-lg transition duration-300 flex items-center justify-center space-x-2`}
-              onClick={() => { openLoginModal(); setIsOpen(false); }} 
-            >
-              <LogIn className="w-5 h-5" />
-              <span>Log In</span>
-            </button>
+            )}
           </div>
         </div>
       )}
@@ -477,8 +570,36 @@ const UCBHome = () => {
   };
 
   // Función para abrir UCB-Explorer Manager (redirige a Home.jsx)
-  const openUcbExplorerManager = () => {
+  const openUcbExplorerManager = async () => {
     console.log('Redirigiendo a UCB-Explorer Manager...');
+    // Verificar si hay token activo
+    const token = sessionStorage.getItem('token');
+    if (!token) {
+      // Registrar intento de acceso no autorizado (registro individual sin usuario autenticado)
+      try {
+        const userStr = sessionStorage.getItem('user');
+        let userObj = null;
+        try { userObj = userStr ? JSON.parse(userStr) : null; } catch (e) { userObj = null; }
+        const payload = { tipo_log: 4, fechahora: new Date().toISOString() };
+        // id_usuario requerido por backend
+        payload.id_usuario = userObj ? (userObj.id || userObj.id_usuario || 0) : 0;
+        if (userObj) {
+          payload.nombre_usuario = userObj.nombre || userObj.nombre_usuario || userObj.correo || '';
+          payload.apellido_usuario = userObj.apellido || userObj.apellido_usuario || '';
+          payload.nombre_rol = userObj.rol || userObj.nombre_rol || '';
+        }
+        await fetch('http://localhost:3000/logs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload) // Acceso no autorizado
+        });
+      } catch (err) {
+        console.error('Error al registrar log de acceso no autorizado:', err);
+      }
+      // Mostrar modal de login
+      setShowLoginModal(true);
+      return;
+    }
     navigate('/UCB-Explorer-Manager'); // Redirige a la ruta de Home.jsx
   };
 
