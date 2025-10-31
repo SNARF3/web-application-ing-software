@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogIn, Eye, EyeOff, X, Mail, Shield, CheckCircle } from 'lucide-react';
+import { LogIn, Eye, EyeOff, X, Mail, Shield, CheckCircle, ArrowLeft, Key } from 'lucide-react';
 
 const COLORS = {
   primary: 'bg-[#003366]',
@@ -28,10 +28,71 @@ const LoginModal = ({ isOpen, closeModal, onLoginSuccess }) => {
   // Estado para pantalla de éxito
   const [showSuccess, setShowSuccess] = useState(false);
 
+  // Estados para recuperación de contraseña
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
+  const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
+  const [forgotPasswordError, setForgotPasswordError] = useState('');
+  
+  // NUEVOS ESTADOS: Pantallas separadas para recuperación
+  const [showRecoveryVerification, setShowRecoveryVerification] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [recoveryToken, setRecoveryToken] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordResetLoading, setPasswordResetLoading] = useState(false);
+  const [passwordResetError, setPasswordResetError] = useState('');
+
+  // Estados de validación
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+
   if (!isOpen) return null;
+
+  // Validaciones
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email) return 'El correo electrónico es requerido';
+    if (!emailRegex.test(email)) return 'Ingresa un correo electrónico válido';
+    if (!email.includes('ucb.edu.bo')) return 'Debe ser un correo institucional UCB';
+    return '';
+  };
+
+  const validatePassword = (password) => {
+    if (!password) return 'La contraseña es requerida';
+    if (password.length < 6) return 'La contraseña debe tener al menos 6 caracteres';
+    return '';
+  };
+
+  const validateNewPassword = (password) => {
+    if (!password) return 'La nueva contraseña es requerida';
+    if (password.length < 6) return 'La contraseña debe tener al menos 6 caracteres';
+    return '';
+  };
+
+  const validateConfirmPassword = (confirm, newPass) => {
+    if (!confirm) return 'Confirma tu contraseña';
+    if (confirm !== newPass) return 'Las contraseñas no coinciden';
+    return '';
+  };
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validaciones
+    const emailValidation = validateEmail(email);
+    const passwordValidation = validatePassword(password);
+    
+    setEmailError(emailValidation);
+    setPasswordError(passwordValidation);
+    
+    if (emailValidation || passwordValidation) {
+      return;
+    }
+
     setLoading(true);
     setError('');
 
@@ -191,6 +252,216 @@ const LoginModal = ({ isOpen, closeModal, onLoginSuccess }) => {
     }
   };
 
+  // Funciones para recuperación de contraseña
+  const handleForgotPasswordSubmit = async (e) => {
+    e.preventDefault();
+    
+    const emailValidation = validateEmail(forgotPasswordEmail);
+    setForgotPasswordError(emailValidation);
+    
+    if (emailValidation) return;
+
+    setForgotPasswordLoading(true);
+    setForgotPasswordError('');
+
+    try {
+      // Nuevo flujo: pedir al backend que verifique si el correo existe y envíe el código.
+      // Endpoint sugerido: POST /api/register/request-password-reset  (body: { correo })
+      const response = await fetch('http://localhost:3000/api/register/request-password-reset', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ correo: forgotPasswordEmail })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Si el backend confirma que el correo está registrado y envió el código
+        setShowRecoveryVerification(true);
+        console.log('✅ Código de recuperación enviado');
+      } else {
+        // Mostrar el mensaje que venga del backend (por ejemplo: 'Correo no registrado')
+        setForgotPasswordError(data.message || 'No se pudo enviar el código.');
+        console.log('❌ Error al solicitar recuperación:', data);
+      }
+    } catch (error) {
+      console.error('Error en recuperación:', error);
+      setForgotPasswordError('Error de conexión con el servidor');
+    } finally {
+      setForgotPasswordLoading(false);
+    }
+  };
+
+  // Verificar el código de recuperación (PANTALLA SEPARADA)
+  const handleRecoveryVerificationSubmit = async (e) => {
+    e.preventDefault();
+    setVerificationLoading(true);
+    setPasswordResetError('');
+
+    try {
+      // Verificar el código con el backend y recibir un token temporal para reset de contraseña
+      // Endpoint sugerido: POST /api/register/verify-reset-code  (body: { correo, codigo })
+      const response = await fetch('http://localhost:3000/api/register/verify-reset-code', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ correo: forgotPasswordEmail, codigo: verificationCode })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // El backend debe devolver un token temporal (resetToken) para autorizar el cambio.
+        const resetToken = data.resetToken || data.token;
+        if (!resetToken) {
+          setPasswordResetError('Verificación correcta pero no se recibió token. Contacta al administrador.');
+        } else {
+          setRecoveryToken(resetToken);
+          sessionStorage.setItem('resetToken', resetToken);
+          setShowChangePassword(true);
+        }
+      } else {
+        setPasswordResetError(data.message || 'Código inválido');
+      }
+    } catch (error) {
+      console.error('Error en verificación de recuperación:', error);
+      setPasswordResetError('Error de conexión con el servidor');
+    } finally {
+      setVerificationLoading(false);
+    }
+  };
+
+  // Cambiar la contraseña (PANTALLA SEPARADA)
+  const handlePasswordChangeSubmit = async (e) => {
+    e.preventDefault();
+    
+    const newPasswordValidation = validateNewPassword(newPassword);
+    const confirmPasswordValidation = validateConfirmPassword(confirmPassword, newPassword);
+    
+    if (newPasswordValidation || confirmPasswordValidation) {
+      setPasswordResetError(newPasswordValidation || confirmPasswordValidation);
+      return;
+    }
+
+    setPasswordResetLoading(true);
+
+    try {
+      // Usamos el reset token proporcionado por verify-reset-code
+      const token = recoveryToken || sessionStorage.getItem('resetToken');
+      if (!token) {
+        setPasswordResetError('No se encontró token de restablecimiento. Vuelve a verificar el código.');
+        setPasswordResetLoading(false);
+        return;
+      }
+
+      const response = await fetch('http://localhost:3000/api/register/reset-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ nueva_contrasenia: newPassword })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Mostrar éxito
+        setShowSuccess(true);
+        setTimeout(() => {
+          // limpiar token de recuperación
+          if (recoveryToken) {
+            setRecoveryToken('');
+            sessionStorage.removeItem('resetToken');
+          }
+          // resetear estados y cerrar modal
+          resetAllStates();
+          closeModal();
+        }, 2000);
+      } else {
+        setPasswordResetError(data.message || 'Error al cambiar contraseña');
+      }
+    } catch (error) {
+      console.error('Error al cambiar contraseña:', error);
+      setPasswordResetError('Error de conexión con el servidor');
+    } finally {
+      setPasswordResetLoading(false);
+    }
+  };
+
+  const resetAllStates = () => {
+    setShowForgotPassword(false);
+    setShowRecoveryVerification(false);
+    setShowChangePassword(false);
+    setForgotPasswordEmail('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setVerificationCode('');
+    setShowSuccess(false);
+    setEmail('');
+    setPassword('');
+    setEmailError('');
+    setPasswordError('');
+    setForgotPasswordError('');
+    setPasswordResetError('');
+    setVerificationError('');
+  };
+
+  const handleBackToForgotPassword = () => {
+    setShowRecoveryVerification(false);
+    setVerificationCode('');
+    setPasswordResetError('');
+  };
+
+  const handleBackToRecoveryVerification = () => {
+    setShowChangePassword(false);
+    setNewPassword('');
+    setConfirmPassword('');
+    setPasswordResetError('');
+  };
+
+  const handleBackToMainLogin = () => {
+    setShowForgotPassword(false);
+    setForgotPasswordEmail('');
+    setForgotPasswordError('');
+  };
+
+  // Reenviar código en recuperación
+  const handleResendRecoveryCode = async () => {
+    setVerificationLoading(true);
+    setPasswordResetError('');
+
+    try {
+      const response = await fetch('http://localhost:3000/api/login/solicitar', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          correo: forgotPasswordEmail,
+          contrasenia: '12345678'
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setPasswordResetError('');
+        console.log('✅ Código de recuperación reenviado');
+      } else {
+        setPasswordResetError('Error al reenviar código');
+      }
+    } catch (error) {
+      console.error('Error al reenviar código de recuperación:', error);
+      setPasswordResetError('Error de conexión');
+    } finally {
+      setVerificationLoading(false);
+    }
+  };
+
   // Función para renderizar el contenido según el estado
   const renderContent = () => {
     // PANTALLA DE ÉXITO
@@ -201,21 +472,269 @@ const LoginModal = ({ isOpen, closeModal, onLoginSuccess }) => {
             <CheckCircle className="w-12 h-12 text-white" />
           </div>
           <h4 className="text-2xl font-bold text-gray-800 mb-2">
-            ¡Inicio de Sesión Exitoso!
+            {showChangePassword ? '¡Contraseña Actualizada!' : '¡Inicio de Sesión Exitoso!'}
           </h4>
           <p className="text-gray-600 text-lg">
-            Bienvenido a UCB Explorer
+            {showChangePassword ? 'Tu contraseña ha sido actualizada correctamente' : 'Bienvenido a UCB Explorer'}
           </p>
           <div className="pt-4">
             <div className="inline-flex items-center px-4 py-2 bg-green-100 text-green-800 rounded-full text-sm font-medium">
-              Redirigiendo...
+              {showChangePassword ? 'Redirigiendo al login...' : 'Redirigiendo...'}
             </div>
           </div>
         </div>
       );
     }
 
-    // PANTALLA DE VERIFICACIÓN
+    // PANTALLA DE CAMBIO DE CONTRASEÑA (SEPARADA)
+    if (showChangePassword) {
+      return (
+        <div className="space-y-6">
+          <div className="text-center">
+            <div className="mx-auto w-16 h-16 bg-[#FFD700] rounded-full flex items-center justify-center mb-4">
+              <Key className="w-8 h-8 text-[#003366]" />
+            </div>
+            <h4 className="text-xl font-bold text-gray-800 mb-2">
+              Nueva Contraseña
+            </h4>
+            <p className="text-gray-600">
+              Crea tu nueva contraseña
+            </p>
+          </div>
+
+          {passwordResetError && (
+            <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
+              {passwordResetError}
+            </div>
+          )}
+
+          <form onSubmit={handlePasswordChangeSubmit}>
+            <div className="mb-4">
+              <label htmlFor="new-password" className="block text-sm font-medium text-gray-700 mb-2">
+                Nueva Contraseña
+              </label>
+              <div className="relative">
+                <input 
+                  type={showNewPassword ? 'text' : 'password'} 
+                  id="new-password" 
+                  placeholder="••••••••" 
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-4 focus:ring-[#FFD700]/50 focus:border-[#003366] transition duration-150 shadow-sm pr-10" 
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required 
+                />
+                <button 
+                  type="button" 
+                  onClick={() => setShowNewPassword(!showNewPassword)} 
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-[#003366] transition duration-150" 
+                >
+                  {showNewPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <label htmlFor="confirm-password" className="block text-sm font-medium text-gray-700 mb-2">
+                Confirmar Contraseña
+              </label>
+              <div className="relative">
+                <input 
+                  type={showConfirmPassword ? 'text' : 'password'} 
+                  id="confirm-password" 
+                  placeholder="••••••••" 
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-4 focus:ring-[#FFD700]/50 focus:border-[#003366] transition duration-150 shadow-sm pr-10" 
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required 
+                />
+                <button 
+                  type="button" 
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)} 
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-[#003366] transition duration-150" 
+                >
+                  {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
+            </div>
+
+            <button 
+              type="submit" 
+              disabled={passwordResetLoading}
+              className={`${COLORS.accent} ${COLORS.hoverAccent} w-full ${COLORS.textDark} font-black py-3 rounded-lg shadow-xl text-lg transition duration-300 transform hover:scale-[1.02] border-2 border-transparent hover:border-[#003366] disabled:opacity-50 disabled:cursor-not-allowed mb-3`}
+            >
+              {passwordResetLoading ? (
+                <div className="flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#003366] mr-2"></div>
+                  Actualizando...
+                </div>
+              ) : (
+                'Actualizar Contraseña'
+              )}
+            </button>
+
+            <div className="flex justify-between text-sm">
+              <button 
+                type="button"
+                onClick={handleBackToRecoveryVerification}
+                className="text-[#003366] hover:text-[#FFD700] font-medium transition duration-150"
+              >
+                ← Volver
+              </button>
+            </div>
+          </form>
+        </div>
+      );
+    }
+
+    // PANTALLA DE VERIFICACIÓN DE RECUPERACIÓN (SEPARADA)
+    if (showRecoveryVerification) {
+      return (
+        <div className="space-y-6">
+          <div className="text-center">
+            <div className="mx-auto w-16 h-16 bg-[#FFD700] rounded-full flex items-center justify-center mb-4">
+              <Mail className="w-8 h-8 text-[#003366]" />
+            </div>
+            <h4 className="text-xl font-bold text-gray-800 mb-2">
+              Verificar Código
+            </h4>
+            <p className="text-gray-600">
+              Ingresa el código enviado a:
+            </p>
+            <p className="font-semibold text-[#003366] mt-1">{forgotPasswordEmail}</p>
+            <p className="text-sm text-gray-500 mt-2">
+              El código expirará en 10 minutos
+            </p>
+          </div>
+
+          {passwordResetError && (
+            <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
+              {passwordResetError}
+            </div>
+          )}
+
+          <form onSubmit={handleRecoveryVerificationSubmit}>
+            <div className="mb-4">
+              <label htmlFor="recovery-verification-code" className="block text-sm font-medium text-gray-700 mb-2">
+                Código de Verificación
+              </label>
+              <input 
+                type="text" 
+                id="recovery-verification-code" 
+                placeholder="123456" 
+                maxLength={6}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-4 focus:ring-[#FFD700]/50 focus:border-[#003366] transition duration-150 shadow-sm text-center text-xl font-mono tracking-widest" 
+                value={verificationCode}
+                onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
+                required 
+              />
+            </div>
+
+            <button 
+              type="submit" 
+              disabled={verificationLoading || verificationCode.length !== 6}
+              className={`${COLORS.accent} ${COLORS.hoverAccent} w-full ${COLORS.textDark} font-black py-3 rounded-lg shadow-xl text-lg transition duration-300 transform hover:scale-[1.02] border-2 border-transparent hover:border-[#003366] disabled:opacity-50 disabled:cursor-not-allowed mb-3`}
+            >
+              {verificationLoading ? (
+                <div className="flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#003366] mr-2"></div>
+                  Verificando...
+                </div>
+              ) : (
+                'Verificar Código'
+              )}
+            </button>
+
+            <div className="flex justify-between text-sm">
+              <button 
+                type="button"
+                onClick={handleBackToForgotPassword}
+                className="text-[#003366] hover:text-[#FFD700] font-medium transition duration-150"
+              >
+                ← Volver
+              </button>
+              
+              <button 
+                type="button"
+                onClick={handleResendRecoveryCode}
+                disabled={verificationLoading}
+                className="text-[#003366] hover:text-[#FFD700] font-medium transition duration-150 disabled:opacity-50"
+              >
+                Reenviar código
+              </button>
+            </div>
+          </form>
+        </div>
+      );
+    }
+
+    // PANTALLA DE OLVIDÉ MI CONTRASEÑA
+    if (showForgotPassword) {
+      return (
+        <div className="space-y-6">
+          <div className="text-center">
+            <div className="mx-auto w-16 h-16 bg-[#FFD700] rounded-full flex items-center justify-center mb-4">
+              <Key className="w-8 h-8 text-[#003366]" />
+            </div>
+            <h4 className="text-xl font-bold text-gray-800 mb-2">
+              Recuperar Contraseña
+            </h4>
+            <p className="text-gray-600">
+              Ingresa tu correo institucional para recibir un código de verificación
+            </p>
+          </div>
+
+          {forgotPasswordError && (
+            <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
+              {forgotPasswordError}
+            </div>
+          )}
+
+          <form onSubmit={handleForgotPasswordSubmit}>
+            <div className="mb-6">
+              <label htmlFor="forgot-email" className="block text-sm font-medium text-gray-700 mb-2">
+                Correo Institucional
+              </label>
+              <input 
+                type="email" 
+                id="forgot-email" 
+                placeholder="ejemplo@ucb.edu.bo" 
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-4 focus:ring-[#FFD700]/50 focus:border-[#003366] transition duration-150 shadow-sm" 
+                value={forgotPasswordEmail}
+                onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                required 
+              />
+            </div>
+
+            <button 
+              type="submit" 
+              disabled={forgotPasswordLoading}
+              className={`${COLORS.accent} ${COLORS.hoverAccent} w-full ${COLORS.textDark} font-black py-3 rounded-lg shadow-xl text-lg transition duration-300 transform hover:scale-[1.02] border-2 border-transparent hover:border-[#003366] disabled:opacity-50 disabled:cursor-not-allowed mb-3`}
+            >
+              {forgotPasswordLoading ? (
+                <div className="flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#003366] mr-2"></div>
+                  Enviando código...
+                </div>
+              ) : (
+                'Enviar Código'
+              )}
+            </button>
+
+            <div className="flex justify-between text-sm">
+              <button 
+                type="button"
+                onClick={handleBackToMainLogin}
+                className="text-[#003366] hover:text-[#FFD700] font-medium transition duration-150"
+              >
+                ← Volver al login
+              </button>
+            </div>
+          </form>
+        </div>
+      );
+    }
+
+    // PANTALLA DE VERIFICACIÓN (login normal)
     if (showVerification) {
       return (
         <div className="space-y-6">
@@ -299,6 +818,19 @@ const LoginModal = ({ isOpen, closeModal, onLoginSuccess }) => {
     // PANTALLA DE LOGIN ORIGINAL
     return (
       <>
+        {/* Logo UCB */}
+        <div className="flex justify-center mb-6">
+          <img 
+            src="/photos/UCBLogo2.png" 
+            alt="Logo UCB" 
+            className="h-16 w-auto"
+            onError={(e) => {
+              console.error('Error cargando el logo:', e);
+              e.target.style.display = 'none';
+            }}
+          />
+        </div>
+
         <p className="text-gray-600 mb-6 text-center font-semibold">
           Inicia sesión con tus credenciales UCB.
         </p>
@@ -318,11 +850,23 @@ const LoginModal = ({ isOpen, closeModal, onLoginSuccess }) => {
               type="email" 
               id="modal-email" 
               placeholder="ejemplo@ucb.edu.bo" 
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-4 focus:ring-[#FFD700]/50 focus:border-[#003366] transition duration-150 shadow-sm" 
+              className={`w-full p-3 border rounded-lg focus:ring-4 focus:ring-[#FFD700]/50 focus:border-[#003366] transition duration-150 shadow-sm ${
+                emailError ? 'border-red-500' : 'border-gray-300'
+              }`}
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setEmailError('');
+              }}
+              onBlur={() => setEmailError(validateEmail(email))}
               required 
             />
+            {emailError && (
+              <p className="text-red-500 text-xs mt-1 flex items-center">
+                <X className="w-3 h-3 mr-1" />
+                {emailError}
+              </p>
+            )}
           </div>
 
           <div className="mb-6">
@@ -334,9 +878,15 @@ const LoginModal = ({ isOpen, closeModal, onLoginSuccess }) => {
                 type={showPassword ? 'text' : 'password'} 
                 id="modal-password" 
                 placeholder="••••••••" 
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-4 focus:ring-[#FFD700]/50 focus:border-[#003366] transition duration-150 shadow-sm pr-10" 
+                className={`w-full p-3 border rounded-lg focus:ring-4 focus:ring-[#FFD700]/50 focus:border-[#003366] transition duration-150 shadow-sm pr-10 ${
+                  passwordError ? 'border-red-500' : 'border-gray-300'
+                }`}
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setPasswordError('');
+                }}
+                onBlur={() => setPasswordError(validatePassword(password))}
                 required 
               />
               <button 
@@ -348,6 +898,12 @@ const LoginModal = ({ isOpen, closeModal, onLoginSuccess }) => {
                 {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
               </button>
             </div>
+            {passwordError && (
+              <p className="text-red-500 text-xs mt-1 flex items-center">
+                <X className="w-3 h-3 mr-1" />
+                {passwordError}
+              </p>
+            )}
           </div>
 
           <button 
@@ -367,12 +923,31 @@ const LoginModal = ({ isOpen, closeModal, onLoginSuccess }) => {
         </form>
 
         <div className="mt-6 text-center text-sm">
-          <a href="#" className={`text-[#003366] hover:text-[#FFD700] font-medium transition duration-150 underline`}>
-            ¿Problemas para iniciar sesión?
-          </a>
+          <button 
+            onClick={() => setShowForgotPassword(true)}
+            className={`text-[#003366] hover:text-[#FFD700] font-medium transition duration-150 underline`}
+          >
+            Olvidé mi contraseña
+          </button>
         </div>
       </>
     );
+  };
+
+  const getModalTitle = () => {
+    if (showSuccess) return 'Éxito';
+    if (showChangePassword) return 'Nueva Contraseña';
+    if (showRecoveryVerification) return 'Verificar Código';
+    if (showForgotPassword) return 'Recuperar Contraseña';
+    if (showVerification) return 'Verificación';
+    return 'Acceso UCB Explorer';
+  };
+
+  const getModalIcon = () => {
+    if (showSuccess) return <CheckCircle className="w-6 h-6 mr-3 text-green-400" />;
+    if (showChangePassword || showForgotPassword) return <Key className="w-6 h-6 mr-3 text-[#FFD700]" />;
+    if (showRecoveryVerification || showVerification) return <Shield className="w-6 h-6 mr-3 text-[#FFD700] animate-pulse" />;
+    return <LogIn className="w-6 h-6 mr-3 text-[#FFD700] animate-pulse" />;
   };
 
   return (
@@ -380,14 +955,8 @@ const LoginModal = ({ isOpen, closeModal, onLoginSuccess }) => {
       <div className="bg-white rounded-2xl shadow-3xl w-full max-w-md m-4 transform transition-all duration-300 scale-100 opacity-100 border-t-8 border-[#FFD700]">
         <div className={`${COLORS.primary} p-6 rounded-t-xl flex justify-between items-center`}>
           <h3 className="text-2xl font-bold text-white flex items-center">
-            {showSuccess ? (
-              <CheckCircle className="w-6 h-6 mr-3 text-green-400" />
-            ) : showVerification ? (
-              <Shield className="w-6 h-6 mr-3 text-[#FFD700] animate-pulse" />
-            ) : (
-              <LogIn className="w-6 h-6 mr-3 text-[#FFD700] animate-pulse" />
-            )}
-            {showSuccess ? 'Éxito' : showVerification ? 'Verificación' : 'Acceso UCB Explorer'}
+            {getModalIcon()}
+            {getModalTitle()}
           </h3>
           {!showSuccess && (
             <button 
