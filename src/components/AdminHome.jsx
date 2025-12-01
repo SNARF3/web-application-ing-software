@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import GestionCuentas from './GestionCuentas';
 import GestionContrasenas from './GestionContrasenas';
+import GestionColegiosYEstudiantes from './GestionColegiosYEstudiantes';
+import GestionVisitas from './GestionVisitas';
 import UCBHome from './UCBHome';
 import { useNavigate } from 'react-router-dom';
 
@@ -415,6 +417,12 @@ const AdminHome = () => {
 
                 {/* Componente Administración de Contraseñas */}
                 {activeModule === 'Administración de Contraseñas' && <GestionContrasenas setHasLoggedBefore={setHasLoggedBefore} />}
+
+                {/* Componente Gestión de Colegios y Estudiantes */}
+                {activeModule === 'Colegios y Estudiantes' && <GestionColegiosYEstudiantes />}
+
+                {/* Componente Gestión de Visitas */}
+                {activeModule === 'Gestión de Visitas' && <GestionVisitas />}
                 
                 {/* 5. Vista de Métricas Rápidas (Solo en Dashboard) */}
                 {activeModule === 'Dashboard' && (
