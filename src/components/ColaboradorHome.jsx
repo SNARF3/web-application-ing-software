@@ -6,6 +6,9 @@ import {
 } from 'lucide-react';
 import GestionCuentas from './GestionCuentas';
 import GestionContrasenas from './GestionContrasenas';
+import GestionColegiosYEstudiantes from './GestionColegiosYEstudiantes';
+import GestionVisitas from './GestionVisitas';
+import Feedback from './Feedback';
 import UCBHome from './UCBHome';
 import { useNavigate } from 'react-router-dom';
 
@@ -223,7 +226,7 @@ const AdminSidebar = ({ activeModule, setActiveModule, modules, hasLoggedBefore 
 };
 
 
-// --- Componente de Tarjeta de Módulo (Dashboard) ---
+// --- Componente de Tarjeta de Módulo (Inicio) ---
 const ModuleCard = ({ icon: Icon, title, description, delay, onClick }) => (
     <div 
         className={`module-card p-6 rounded-3xl shadow-xl bg-white border-b-8 border-[#FFD700] cursor-pointer 
@@ -245,7 +248,7 @@ const ModuleCard = ({ icon: Icon, title, description, delay, onClick }) => (
 
 // --- Componente Principal (ColaboradorHome) ---
 const ColaboradorHome = () => {
-    const [activeModule, setActiveModule] = useState('Dashboard'); // Módulo inicial
+    const [activeModule, setActiveModule] = useState('Inicio'); // Módulo inicial
     const [hasLoggedBefore, setHasLoggedBefore] = useState(true); // controla navegación
     const navigate = useNavigate();
 
@@ -304,7 +307,7 @@ const ColaboradorHome = () => {
     // Definición de todos los módulos con sus iconos
     const modules = [
         { 
-            name: 'Dashboard', 
+            name: 'Inicio', 
             icon: Zap, 
             description: 'Vista rápida y principales indicadores de gestión.'
         },
@@ -340,7 +343,7 @@ const ColaboradorHome = () => {
         },
     ];
 
-    // Simulación de métricas clave para el Dashboard
+    // Simulación de métricas clave para el Inicio
     const metrics = [
         { title: 'Visitas Programadas', value: '45', icon: CalendarCheck, color: 'bg-green-500' },
         { title: 'Estudiantes Registrados', value: '1,204', icon: Users, color: 'bg-indigo-500' },
@@ -367,7 +370,7 @@ const ColaboradorHome = () => {
                 <header className="flex justify-between items-center mb-10 pt-4 md:pt-0">
                     <h1 className="text-3xl md:text-4xl font-extrabold text-[#003366] animate-slide-in">
                         Panel de Control
-                        {activeModule !== 'Dashboard' && (
+                        {activeModule !== 'Inicio' && (
                             <span className="ml-3 text-2xl font-light text-gray-500"> / {activeModule}</span>
                         )}
                     </h1>
@@ -382,7 +385,7 @@ const ColaboradorHome = () => {
                 </header>
 
                 {/* 3. Contenido Condicional según el módulo activo */}
-                {activeModule === 'Dashboard' && (
+                {activeModule === 'Inicio' && (
                     <>
                         {/* Mensaje de Bienvenida */}
                         <div className={`p-6 md:p-10 rounded-2xl mb-10 text-white shadow-2xl animate-slide-in`}
@@ -400,7 +403,7 @@ const ColaboradorHome = () => {
                         {/* Módulos / Tarjetas de Navegación */}
                         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                             {modules
-                                .filter(m => m.name !== 'Dashboard')
+                                .filter(m => m.name !== 'Inicio')
                                 .map((module, index) => (
                                 <ModuleCard 
                                     key={module.name}
@@ -420,9 +423,18 @@ const ColaboradorHome = () => {
 
                 {/* Componente Administración de Contraseñas */}
                 {activeModule === 'Administración de Contraseñas' && <GestionContrasenas setHasLoggedBefore={setHasLoggedBefore} />}
+
+                {/* Componente Gestión de Colegios y Estudiantes */}
+                {activeModule === 'Colegios y Estudiantes' && <GestionColegiosYEstudiantes />}
+
+                {/* Componente Gestión de Visitas */}
+                {activeModule === 'Gestión de Visitas' && <GestionVisitas />}
+
+                {/* Componente Feedback y Encuestas */}
+                {activeModule === 'Feedback y Encuestas' && <Feedback />}
                 
-                {/* 5. Vista de Métricas Rápidas (Solo en Dashboard) */}
-                {activeModule === 'Dashboard' && (
+                {/* 5. Vista de Métricas Rápidas (Solo en Incio) */}
+                {activeModule === 'Inicio' && (
                     <section className="mt-12">
                         <h3 className="text-2xl font-bold text-[#003366] mb-6 border-b pb-2 flex items-center">
                             <TrendingUp className='w-6 h-6 mr-2 text-[#FFD700]'/> Métricas Clave (Resumen)
