@@ -225,7 +225,7 @@ const LoginModal = ({ isOpen, closeModal, onLoginSuccess }) => {
         console.log('💾 Token guardado');
         console.log('💾 Usuario guardado:', data.usuario);
         
-  // Mostrar pantalla de éxito
+        // Mostrar pantalla de éxito
         setShowSuccess(true);
         
         // Esperar 2 segundos y luego redirigir según el rol
@@ -410,40 +410,39 @@ const LoginModal = ({ isOpen, closeModal, onLoginSuccess }) => {
     setPasswordResetError('');
 
     try {
-      // Verificar el código con el backend y recibir un token temporal para reset de contraseña
-      // Endpoint sugerido: POST /api/register/verify-reset-code  (body: { correo, codigo })
-      const response = await fetch('http://localhost:3000/api/register/verify-reset-code', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ correo: forgotPasswordEmail, codigo: verificationCode })
-      });
+        // Verificar el código con el backend
+        const response = await fetch('http://localhost:3000/user/verify-code', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ correo: forgotPasswordEmail, codigo: verificationCode })
+        });
 
-      const data = await response.json();
+        const data = await response.json();
 
-      if (response.ok) {
-        // El backend debe devolver un token temporal (resetToken) para autorizar el cambio.
-        const resetToken = data.resetToken || data.token;
-        if (!resetToken) {
-          setPasswordResetError('Verificación correcta pero no se recibió token. Contacta al administrador.');
+        if (response.ok) {
+            const avanzar = data.success;
+            if(avanzar) {
+              // MOSTRAR PANTALLA DE CAMBIO DE CONTRASEÑA
+              setShowChangePassword(true);
+              setShowRecoveryVerification(false);
+              setPasswordResetError('');
+            } else {
+              setPasswordResetError('Código inválido');
+            }
         } else {
-          setRecoveryToken(resetToken);
-          sessionStorage.setItem('resetToken', resetToken);
-          setShowChangePassword(true);
+            setPasswordResetError(data.message || 'Código inválido');
         }
-      } else {
-        setPasswordResetError(data.message || 'Código inválido');
-      }
     } catch (error) {
-      console.error('Error en verificación de recuperación:', error);
-      setPasswordResetError('Error de conexión con el servidor');
+        console.error('Error en verificación de recuperación:', error);
+        setPasswordResetError('Error de conexión con el servidor');
     } finally {
-      setVerificationLoading(false);
+        setVerificationLoading(false);
     }
   };
 
-  // Cambiar la contraseña (PANTALLA SEPARADA)
+  // Cambiar la contraseña (PANTALLA SEPARADA) - NUEVA API
   const handlePasswordChangeSubmit = async (e) => {
     e.preventDefault();
     
@@ -456,23 +455,19 @@ const LoginModal = ({ isOpen, closeModal, onLoginSuccess }) => {
     }
 
     setPasswordResetLoading(true);
+    setPasswordResetError('');
 
     try {
-      // Usamos el reset token proporcionado por verify-reset-code
-      const token = recoveryToken || sessionStorage.getItem('resetToken');
-      if (!token) {
-        setPasswordResetError('No se encontró token de restablecimiento. Vuelve a verificar el código.');
-        setPasswordResetLoading(false);
-        return;
-      }
-
-      const response = await fetch('http://localhost:3000/api/register/reset-password', {
+      // Usar la nueva API para actualizar la contraseña
+      const response = await fetch('http://localhost:3000/user/update-password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ nueva_contrasenia: newPassword })
+        body: JSON.stringify({
+          correo: forgotPasswordEmail,
+          nueva_contrasenia: newPassword
+        })
       });
 
       const data = await response.json();
@@ -518,17 +513,14 @@ const LoginModal = ({ isOpen, closeModal, onLoginSuccess }) => {
         // Mostrar éxito
         setShowSuccess(true);
         setTimeout(() => {
-          // limpiar token de recuperación
-          if (recoveryToken) {
-            setRecoveryToken('');
-            sessionStorage.removeItem('resetToken');
-          }
-          // resetear estados y cerrar modal
+          // Resetear estados y cerrar modal
           resetAllStates();
           closeModal();
         }, 2000);
+        console.log('✅ Contraseña actualizada exitosamente');
       } else {
         setPasswordResetError(data.message || 'Error al cambiar contraseña');
+        console.log('❌ Error al cambiar contraseña:', data);
       }
     } catch (error) {
       console.error('Error al cambiar contraseña:', error);
@@ -636,98 +628,80 @@ const LoginModal = ({ isOpen, closeModal, onLoginSuccess }) => {
     if (showChangePassword) {
       return (
         <div className="space-y-6">
-          <div className="text-center">
-            <div className="mx-auto w-16 h-16 bg-[#FFD700] rounded-full flex items-center justify-center mb-4">
-              <Key className="w-8 h-8 text-[#003366]" />
-            </div>
-            <h4 className="text-xl font-bold text-gray-800 mb-2">
-              Nueva Contraseña
-            </h4>
-            <p className="text-gray-600">
-              Crea tu nueva contraseña
-            </p>
-          </div>
-
-          {passwordResetError && (
-            <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
-              {passwordResetError}
-            </div>
-          )}
-
-          <form onSubmit={handlePasswordChangeSubmit}>
-            <div className="mb-4">
-              <label htmlFor="new-password" className="block text-sm font-medium text-gray-700 mb-2">
-                Nueva Contraseña
-              </label>
-              <div className="relative">
-                <input 
-                  type={showNewPassword ? 'text' : 'password'} 
-                  id="new-password" 
-                  placeholder="••••••••" 
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-4 focus:ring-[#FFD700]/50 focus:border-[#003366] transition duration-150 shadow-sm pr-10" 
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  required 
-                />
-                <button 
-                  type="button" 
-                  onClick={() => setShowNewPassword(!showNewPassword)} 
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-[#003366] transition duration-150" 
-                >
-                  {showNewPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                </button>
-              </div>
-            </div>
-
-            <div className="mb-6">
-              <label htmlFor="confirm-password" className="block text-sm font-medium text-gray-700 mb-2">
-                Confirmar Contraseña
-              </label>
-              <div className="relative">
-                <input 
-                  type={showConfirmPassword ? 'text' : 'password'} 
-                  id="confirm-password" 
-                  placeholder="••••••••" 
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-4 focus:ring-[#FFD700]/50 focus:border-[#003366] transition duration-150 shadow-sm pr-10" 
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required 
-                />
-                <button 
-                  type="button" 
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)} 
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-[#003366] transition duration-150" 
-                >
-                  {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                </button>
-              </div>
-            </div>
-
-            <button 
-              type="submit" 
-              disabled={passwordResetLoading}
-              className={`${COLORS.accent} ${COLORS.hoverAccent} w-full ${COLORS.textDark} font-black py-3 rounded-lg shadow-xl text-lg transition duration-300 transform hover:scale-[1.02] border-2 border-transparent hover:border-[#003366] disabled:opacity-50 disabled:cursor-not-allowed mb-3`}
-            >
-              {passwordResetLoading ? (
-                <div className="flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#003366] mr-2"></div>
-                  Actualizando...
+            <div className="text-center">
+                <div className="mx-auto w-16 h-16 bg-[#FFD700] rounded-full flex items-center justify-center mb-4">
+                    <Key className="w-8 h-8 text-[#003366]" />
                 </div>
-              ) : (
-                'Actualizar Contraseña'
-              )}
-            </button>
-
-            <div className="flex justify-between text-sm">
-              <button 
-                type="button"
-                onClick={handleBackToRecoveryVerification}
-                className="text-[#003366] hover:text-[#FFD700] font-medium transition duration-150"
-              >
-                ← Volver
-              </button>
+                <h4 className="text-xl font-bold text-gray-800 mb-2">
+                    Nueva Contraseña
+                </h4>
+                <p className="text-gray-600">
+                    Crea tu nueva contraseña
+                </p>
             </div>
-          </form>
+
+            {passwordResetError && (
+                <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
+                    {passwordResetError}
+                </div>
+            )}
+
+            <form onSubmit={handlePasswordChangeSubmit}>
+                <div className="mb-4">
+                    <label htmlFor="new-password" className="block text-sm font-medium text-gray-700 mb-2">
+                        Nueva Contraseña
+                    </label>
+                    <input 
+                        type="password" 
+                        id="new-password" 
+                        placeholder="••••••••" 
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-4 focus:ring-[#FFD700]/50 focus:border-[#003366] transition duration-150 shadow-sm" 
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        required 
+                    />
+                </div>
+
+                <div className="mb-6">
+                    <label htmlFor="confirm-password" className="block text-sm font-medium text-gray-700 mb-2">
+                        Confirmar Contraseña
+                    </label>
+                    <input 
+                        type="password" 
+                        id="confirm-password" 
+                        placeholder="••••••••" 
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-4 focus:ring-[#FFD700]/50 focus:border-[#003366] transition duration-150 shadow-sm" 
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        required 
+                    />
+                </div>
+
+                <button 
+                    type="submit" 
+                    disabled={passwordResetLoading}
+                    className={`${COLORS.accent} ${COLORS.hoverAccent} w-full ${COLORS.textDark} font-black py-3 rounded-lg shadow-xl text-lg transition duration-300 transform hover:scale-[1.02] border-2 border-transparent hover:border-[#003366] disabled:opacity-50 disabled:cursor-not-allowed mb-3`}
+                >
+                    {passwordResetLoading ? (
+                        <div className="flex items-center justify-center">
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#003366] mr-2"></div>
+                            Actualizando...
+                        </div>
+                    ) : (
+                        'Actualizar Contraseña'
+                    )}
+                </button>
+
+                <div className="flex justify-between text-sm">
+                    <button 
+                        type="button"
+                        onClick={handleBackToRecoveryVerification}
+                        className="text-[#003366] hover:text-[#FFD700] font-medium transition duration-150"
+                    >
+                        ← Volver
+                    </button>
+                </div>
+            </form>
         </div>
       );
     }
