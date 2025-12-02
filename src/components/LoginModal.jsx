@@ -124,18 +124,13 @@ const LoginModal = ({ isOpen, closeModal, onLoginSuccess }) => {
           count += 1;
           localStorage.setItem(key, String(count));
 
-          // Enviar log de intento fallido
-          // El backend requiere id_usuario; si no hay usuario autenticado usamos 0
-          const userStr_local = sessionStorage.getItem('user');
-          let userObj_local = null;
-          try { userObj_local = userStr_local ? JSON.parse(userStr_local) : null; } catch (e) { userObj_local = null; }
+          // Para intentos fallidos de login, usar el primer usuario admin como id_usuario
+          // ya que no tenemos usuario autenticado en este punto
           const payload = {
-            tipo_log: 3,
-            // Usar null cuando no hay usuario autenticado para evitar claves foráneas inválidas en BD
-            id_usuario: userObj_local ? (userObj_local.id || userObj_local.id_usuario || userObj_local.ID || null) : null,
+            tipo_log: 3, // 3 = Inicio de sesión fallido
+            id_usuario: 1, // Usar ID 1 (admin) para estos registros
             correo_intento: email,
-            intentos: count,
-            fechahora: new Date().toISOString(),
+            intentos: count
           };
           console.debug('Enviando log (intento fallido):', payload);
           const res = await fetch('http://localhost:3000/logs', {
@@ -157,11 +152,10 @@ const LoginModal = ({ isOpen, closeModal, onLoginSuccess }) => {
           if (count >= 3) {
             try {
               const payload2 = {
-                tipo_log: 4,
-                id_usuario: userObj_local ? (userObj_local.id || userObj_local.id_usuario || userObj_local.ID || null) : null,
+                tipo_log: 4, // 4 = Intento de acceso no autorizado
+                id_usuario: 1, // Usar ID 1 (admin) para logs de seguridad
                 correo_intento: email,
-                detalle: '3_intentos_fallidos',
-                fechahora: new Date().toISOString(),
+                detalle: '3_intentos_fallidos'
               };
               console.debug('Enviando log (acceso no autorizado - 3 intentos):', payload2);
               const res2 = await fetch('http://localhost:3000/logs', {
@@ -263,23 +257,27 @@ const LoginModal = ({ isOpen, closeModal, onLoginSuccess }) => {
             const userStr = sessionStorage.getItem('user');
             let userObj = null;
             try { userObj = userStr ? JSON.parse(userStr) : null; } catch (e) { userObj = null; }
-            const token = sessionStorage.getItem('token');
-            const payload = { tipo_log: 1, fechahora: new Date().toISOString() };
-            // Asegurar id_usuario (requerido por backend)
-            payload.id_usuario = userObj ? (userObj.id || userObj.id_usuario || userObj.ID || null) : null;
-            if (userObj) {
-              payload.nombre_usuario = userObj.nombre || userObj.nombre_usuario || userObj.correo || '';
-              payload.apellido_usuario = userObj.apellido || userObj.apellido_usuario || '';
-              payload.nombre_rol = userObj.rol || userObj.nombre_rol || '';
+            
+            // Get user ID - it should be available since we just got the user data
+            const userId = userObj?.id || userObj?.id_usuario;
+            if (!userId) {
+                console.error('Error: No se encontró id_usuario para el log de inicio de sesión');
+                return;
             }
+
+            // Log de inicio de sesión exitoso - solo enviar campos requeridos
+            const payload = {
+                id_usuario: userId,
+                tipo_log: 1 // 1 = Inicio de sesión exitoso
+            };
+
             console.debug('Enviando log (login exitoso):', payload);
             const resLog = await fetch('http://localhost:3000/logs', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                ...(token ? { Authorization: `Bearer ${token}` } : {}),
-              },
-              body: JSON.stringify(payload),
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload),
             });
             if (!resLog.ok) {
               try {
@@ -475,6 +473,43 @@ const LoginModal = ({ isOpen, closeModal, onLoginSuccess }) => {
       const data = await response.json();
 
       if (response.ok) {
+        // Registrar log de cambio de contraseña (tipo 5)
+        try {
+          // Intentar obtener id de usuario desde sessionStorage
+          const userStr = sessionStorage.getItem('user');
+          let userObj = null;
+          try { userObj = userStr ? JSON.parse(userStr) : null; } catch (e) { userObj = null; }
+
+          // El backend de reset puede devolver información del usuario en `data` (varía según implementación)
+          const candidateId = userObj?.id || userObj?.id_usuario || data?.usuario?.id || data?.id || data?.userId || null;
+
+          // Si no encontramos id, usar fallback administrativo (1) para evitar 400 del servidor
+          const id_usuario = candidateId || 1;
+
+          const tokenAuth = sessionStorage.getItem('token') || recoveryToken || '';
+
+          const logPayload = {
+            id_usuario,
+            tipo_log: 5 // 5 = Cambio de contraseña
+          };
+
+          const resLog = await fetch('http://localhost:3000/logs', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(tokenAuth ? { Authorization: `Bearer ${tokenAuth}` } : {})
+            },
+            body: JSON.stringify(logPayload)
+          });
+
+          if (!resLog.ok) {
+            const errBody = await resLog.json().catch(() => ({}));
+            console.error('Log API (password change) responded with', resLog.status, errBody);
+          }
+        } catch (logErr) {
+          console.error('Error registrando log de cambio de contraseña:', logErr);
+        }
+
         // Mostrar éxito
         setShowSuccess(true);
         setTimeout(() => {
