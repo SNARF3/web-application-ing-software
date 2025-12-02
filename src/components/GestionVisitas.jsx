@@ -303,7 +303,7 @@ const FormularioVisita = ({ visitaToEdit, onSave, onCancel, guias, colegios }) =
                     : 
                     <>
                         <PlusCircle className="w-6 h-6 mr-3 text-[#FFD700]" />
-                        Registrar Nueva Visita (RF-001)
+                        Registrar Nueva Visita
                     </>
                 }
             </h2>
@@ -384,7 +384,7 @@ const FormularioVisita = ({ visitaToEdit, onSave, onCancel, guias, colegios }) =
                         </select>
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Estado de Visita (RF-007) (*)</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Estado de Visita (*)</label>
                         <select
                             name="estado"
                             value={formData.estado}
@@ -435,7 +435,7 @@ const FormularioVisita = ({ visitaToEdit, onSave, onCancel, guias, colegios }) =
                         ) : (
                             <Save className="w-5 h-5 mr-2" />
                         )}
-                        {isEditing ? 'Guardar Cambios (RF-002)' : 'Registrar Visita (RF-001)'}
+                        {isEditing ? 'Guardar Cambios' : 'Registrar Visita'}
                     </button>
                 </div>
             </form>
@@ -485,7 +485,7 @@ const HistorialVisitas = ({ visitas, guias, colegios, onEdit, onDelete, onUpdate
 
     // Eliminación real via API (RF-002)
     const handleDelete = async (visita) => {
-        if (!window.confirm(`¿Está seguro de que desea eliminar la visita del ${visita.colegio} el ${visita.fecha}? (RF-002)`)) return;
+        if (!window.confirm(`¿Está seguro de que desea eliminar la visita del ${visita.colegio} el ${visita.fecha}?`)) return;
         setMessage({ type: 'info', text: 'Eliminando visita...' });
         try {
             const token = sessionStorage.getItem('token') || '';
@@ -541,7 +541,7 @@ const HistorialVisitas = ({ visitas, guias, colegios, onEdit, onDelete, onUpdate
         <div className="bg-white p-6 rounded-xl shadow-2xl border-t-8 border-[#FFD700] lg:col-span-2">
             <h2 className={`text-2xl font-bold mb-6 ${COLORS.textDark} flex items-center`}>
                 <ClipboardList className="w-6 h-6 mr-3 text-[#003366]" />
-                Historial de Visitas Programadas (RF-005)
+                Historial de Visitas Programadas
             </h2>
 
             <CustomAlert message={message.text} type={message.type} onClose={() => setMessage({ type: null, text: null })} />
@@ -614,9 +614,9 @@ const HistorialVisitas = ({ visitas, guias, colegios, onEdit, onDelete, onUpdate
                             <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Colegio</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Fecha</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Hora</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Guía (RF-006)</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Estado (RF-007)</th>
-                            <th className="px-6 py-3 text-right text-xs font-medium text-white uppercase tracking-wider">Acciones (RF-002)</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Guía</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Estado</th>
+                            <th className="px-6 py-3 text-right text-xs font-medium text-white uppercase tracking-wider">Acciones</th>
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-100">
@@ -658,14 +658,14 @@ const HistorialVisitas = ({ visitas, guias, colegios, onEdit, onDelete, onUpdate
                                             <button 
                                                 onClick={() => onEdit(visita)} 
                                                 className={`text-[#003366] hover:text-blue-700 p-2 rounded-full transition hover:bg-gray-100`}
-                                                title="Editar Visita (RF-002)"
+                                                title="Editar Visita"
                                             >
                                                 <Edit className="w-5 h-5" />
                                             </button>
                                             <button 
                                                 onClick={() => handleDelete(visita)} 
                                                 className="text-red-600 hover:text-red-800 p-2 rounded-full transition hover:bg-red-50"
-                                                title="Eliminar Visita (RF-002)"
+                                                title="Eliminar Visita"
                                             >
                                                 <Trash2 className="w-5 h-5" />
                                             </button>
@@ -836,7 +836,7 @@ const GestionVisitas = () => {
                     }`}
                 >
                     <ClipboardList className="w-5 h-5 mr-2" />
-                    Historial y Gestión (RF-005, RF-002, RF-007)
+                    Historial y Gestión
                 </button>
                 <button
                     onClick={() => setActiveTab('formulario')}
@@ -847,9 +847,9 @@ const GestionVisitas = () => {
                     }`}
                 >
                     {visitaToEdit ? 
-                        <><Edit className="w-5 h-5 mr-2" /> Editar Visita (RF-002)</> 
+                        <><Edit className="w-5 h-5 mr-2" /> Editar Visita</> 
                         : 
-                        <><PlusCircle className="w-5 h-5 mr-2" /> Registrar Nueva (RF-001)</>
+                        <><PlusCircle className="w-5 h-5 mr-2" /> Registrar Nueva</>
                     }
                 </button>
             </div>
