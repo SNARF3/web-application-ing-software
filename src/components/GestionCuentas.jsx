@@ -30,15 +30,15 @@ const ROLES = [
 
 // Estado y utilidades para obtener logs desde la API
 // Endpoint esperado: GET http://localhost:3000/logs -> array de objetos con campos como
-// { id_log, fechahora, nombre_usuario, apellido_usuario, nombre_rol, tipo_log }
+// { id_log, fechahora, nombre_usuario, apellido_usuario, nombre_rol, tipo_log }z
 
 // Mapea tipo_log numérico a texto, estado y icono/colores
 const LOG_TYPES = {
   1: { text: 'Inicio de sesión exitoso', status: 'success', Icon: LogIn },
   2: { text: 'Cierre de sesión manual', status: 'info', Icon: Bell },
   3: { text: 'Inicio de sesión fallido', status: 'warning', Icon: AlertCircle },
-  4: { text: 'Varios intentos fallidos', status: 'error', Icon: TrendingDown },
-  5: { text: 'Cambio de contraseña', status: 'success', Icon: LockKeyhole },
+  4: { text: 'Intento de acceso no autorizado (3 intentos fallidos)', status: 'error', Icon: TrendingDown },
+  5: { text: 'Registro de nuevo usuario', status: 'success', Icon: UserPlus },
   6: { text: 'Actualización de datos', status: 'info', Icon: Check },
   7: { text: 'Eliminación de registro', status: 'error', Icon: TrendingDown },
   8: { text: 'Acceso a módulo restringido', status: 'warning', Icon: Shield },

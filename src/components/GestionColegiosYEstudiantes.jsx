@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { 
     School, Plus, Edit, Trash2, Search, X, Save, UploadCloud, AlertCircle, 
     Clipboard, Check, List, MapPin, User, ChevronLeft, Users, Hash, Mail, FileText, 
@@ -17,21 +17,117 @@ const UCB_COLORS = {
 };
 
 // --- SIMULACIÓN DE DATOS INICIALES ---
-const initialColleges = [
-    { id: 'c1', nombre: 'Colegio San Ignacio', ciudad: 'La Paz', contacto: 'Elena Flores', telefono: '77712345' },
-    { id: 'c2', nombre: 'Unidad Educativa Domingo Savio', ciudad: 'Cochabamba', contacto: 'Juan Perez', telefono: '66654321' },
-    { id: 'c3', nombre: 'Liceo Santa Cruz', ciudad: 'Santa Cruz', contacto: 'Ana Rojas', telefono: '55598765' },
-];
-
-const initialStudents = [
-    { id: 's1', collegeId: 'c1', nombre: 'Carlos Quispe', ci: '1234567LP', email: 'carlos.q@email.com', estado: 'Activo' },
-    { id: 's2', collegeId: 'c1', nombre: 'Sofia Mamani', ci: '7654321LP', email: 'sofia.m@email.com', estado: 'Activo' },
-    { id: 's3', collegeId: 'c2', nombre: 'Andres Soliz', ci: '9876543CB', email: 'andres.s@email.com', estado: 'Inactivo' },
-];
+// Initial empty: we'll load from API
+const initialColleges = [];
+const initialStudents = [];
 
 // --- ESTRUCTURAS DE DATOS DE FORMULARIO ---
-const initialCollegeFormData = { id: null, nombre: '', ciudad: '', contacto: '', telefono: '' };
-const initialStudentFormData = { id: null, collegeId: null, nombre: '', ci: '', email: '', estado: 'Activo' };
+const initialCollegeFormData = { id: null, nombre: '', direccion: '', contacto: '', telefono: '' };
+const initialStudentFormData = { id: null, collegeId: null, nombre: '', ci: '', email: '' };
+
+// --- COMPONENTE SEPARADO: MODAL DE COLEGIO ---
+const CollegeFormModal = ({ 
+    show, 
+    isEditing, 
+    formData, 
+    onClose, 
+    onSubmit, 
+    onChange 
+}) => {
+    if (!show) return null;
+    return (
+        <div className="fixed inset-0 z-50 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4" onClick={onClose}>
+            <div 
+                className="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 transform transition-all duration-300 scale-100"
+                onClick={e => e.stopPropagation()}
+            >
+                <div className="flex justify-between items-center pb-4 border-b border-gray-200">
+                    <h3 className={`text-[#003366] text-2xl font-extrabold flex items-center`}>
+                        {isEditing ? <Edit className="w-6 h-6 mr-2" /> : <Plus className="w-6 h-6 mr-2" />}
+                        {isEditing ? 'Editar Colegio (RF-003)' : 'Registrar Nuevo Colegio (RF-003)'}
+                    </h3>
+                    <button onClick={onClose} className="text-gray-400 hover:text-red-500 p-1 rounded-full hover:bg-red-50">
+                        <X className="w-6 h-6" />
+                    </button>
+                </div>
+
+                <form onSubmit={onSubmit} className="mt-4 space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Nombre del Colegio</label>
+                        <input type="text" name="nombre" value={formData.nombre} onChange={onChange} placeholder="Nombre" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFD700] focus:outline-none" required />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 flex items-center"><MapPin className='w-4 h-4 mr-1 text-gray-500'/> Dirección</label>
+                        <input type="text" name="direccion" value={formData.direccion} onChange={onChange} placeholder="Ej: Avenida 6 de Agosto #1234" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFD700] focus:outline-none" required />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 flex items-center"><User className='w-4 h-4 mr-1 text-gray-500'/> Persona de Contacto</label>
+                        <input type="text" name="contacto" value={formData.contacto} onChange={onChange} placeholder="Ej: Lic. María Durán" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFD700] focus:outline-none" required />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Teléfono</label>
+                        <input type="tel" name="telefono" value={formData.telefono} onChange={onChange} placeholder="Ej: 77712345" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFD700] focus:outline-none" required />
+                    </div>
+
+                    <button type="submit" className={`w-full p-3 rounded-lg font-bold flex items-center justify-center transition duration-200 bg-[#003366] hover:bg-[#004488] text-white`}>
+                        <Save className="w-5 h-5 mr-2" />
+                        {isEditing ? 'Guardar Cambios' : 'Registrar Colegio'}
+                    </button>
+                </form>
+            </div>
+        </div>
+    );
+};
+
+// --- COMPONENTE SEPARADO: MODAL DE ESTUDIANTE ---
+const StudentFormModal = ({ 
+    show, 
+    isEditing, 
+    formData, 
+    onClose, 
+    onSubmit, 
+    onChange 
+}) => {
+    if (!show) return null;
+    return (
+        <div className="fixed inset-0 z-50 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4" onClick={onClose}>
+            <div 
+                className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 transform transition-all duration-300 scale-100"
+                onClick={e => e.stopPropagation()}
+            >
+                <div className="flex justify-between items-center pb-4 border-b border-gray-200">
+                    <h3 className={`text-[#003366] text-xl font-extrabold flex items-center`}>
+                        {isEditing ? <Edit className="w-5 h-5 mr-2" /> : <UserPlus className="w-5 h-5 mr-2" />}
+                        {isEditing ? 'Editar Estudiante' : 'Añadir Estudiante (RF-004)'}
+                    </h3>
+                    <button onClick={onClose} className="text-gray-400 hover:text-red-500 p-1 rounded-full hover:bg-red-50">
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
+
+                <form onSubmit={onSubmit} className="mt-4 space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Nombre Completo</label>
+                        <input type="text" name="nombre" value={formData.nombre} onChange={onChange} placeholder="Nombre y Apellido" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFD700] focus:outline-none" required />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 flex items-center"><FileText className='w-4 h-4 mr-1 text-gray-500'/> Cédula de Identidad (CI)</label>
+                        <input type="text" name="ci" value={formData.ci} onChange={onChange} placeholder="Ej: 1234567LP" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFD700] focus:outline-none" required />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 flex items-center"><Mail className='w-4 h-4 mr-1 text-gray-500'/> Email</label>
+                        <input type="email" name="email" value={formData.email} onChange={onChange} placeholder="ejemplo@correo.com" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFD700] focus:outline-none" required />
+                    </div>
+
+                    <button type="submit" className={`w-full p-3 rounded-lg font-bold flex items-center justify-center transition duration-200 bg-[#003366] hover:bg-[#004488] text-white`}>
+                        <Save className="w-5 h-5 mr-2" />
+                        {isEditing ? 'Guardar Cambios' : 'Registrar Estudiante'}
+                    </button>
+                </form>
+            </div>
+        </div>
+    );
+};
 
 // --- COMPONENTE PRINCIPAL ---
 const GestionColegiosYEstudiantes = () => {
@@ -45,6 +141,62 @@ const GestionColegiosYEstudiantes = () => {
     
     // Referencia para el input de archivo
     const fileInputRef = useRef(null);
+
+    // Cargar colegios y estudiantes desde la API al montar el componente
+    useEffect(() => {
+        const token = sessionStorage.getItem('token') || '';
+
+        // Colegios - usar /colegios en lugar de /colegios/simple para obtener más información
+        fetch('http://localhost:3000/colegios', {
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            }
+        })
+        .then(r => r.ok ? r.json() : Promise.resolve([]))
+        .then(data => {
+            if (Array.isArray(data)) {
+                // Normalize: ensure each colegio has id and proper fields
+                const mapped = data.map(c => ({
+                    id: c.id || c.id_colegio || c._id || String(Math.random()),
+                    id_colegio: c.id_colegio || c.id || c._id || null,
+                    nombre: c.nombre || '',
+                    direccion: c.direccion || c.ciudad || '',
+                    contacto: c.contacto || '',
+                    telefono: c.telefono || '',
+                }));
+                setColegios(mapped);
+                console.log('Colegios cargados:', mapped);
+            }
+        })
+        .catch(err => console.error('Error cargando colegios:', err));
+
+        // Estudiantes
+        fetch('http://localhost:3000/estudiantes', {
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            }
+        })
+        .then(r => r.ok ? r.json() : Promise.resolve([]))
+        .then(data => {
+            if (Array.isArray(data)) {
+                // Normalizar campos: correo -> email, id_colegio, colegio_nombre -> colegio
+                const mapped = data.map(s => ({
+                    id: s.id || s.id_estudiante || String(s.id),
+                    nombre: s.nombre,
+                    ci: s.ci,
+                    email: s.correo || s.email,
+                    collegeId: s.id_colegio || s.collegeId || null,
+                    colegio: s.colegio_nombre || s.colegio || '',
+                    curso: s.curso || s.grade || null,
+                    edad: s.edad || null,
+                }));
+                setEstudiantes(mapped);
+            }
+        })
+        .catch(err => console.error('Error cargando estudiantes:', err));
+    }, []);
     
     // --- ESTADO DE MODALES Y FORMULARIOS ---
     const [showCollegeModal, setShowCollegeModal] = useState(false);
@@ -63,14 +215,14 @@ const GestionColegiosYEstudiantes = () => {
 
     // --- RF-003: LÓGICA CRUD DE COLEGIOS ---
 
-    const handleCollegeChange = (e) => {
-        setCollegeFormData({ ...collegeFormData, [e.target.name]: e.target.value });
-    };
+    const handleCollegeChange = useCallback((e) => {
+        setCollegeFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    }, []);
 
-    const handleSaveCollege = (e) => {
+    const handleSaveCollege = useCallback((e) => {
         e.preventDefault();
         
-        // 1. Validar duplicados (por nombre, simulado)
+        // 1. Validar duplicados (por nombre)
         const isDuplicate = colegios.some(c => 
             c.nombre.toLowerCase() === collegeFormData.nombre.toLowerCase() && c.id !== collegeFormData.id
         );
@@ -79,63 +231,110 @@ const GestionColegiosYEstudiantes = () => {
             return;
         }
 
+        const token = sessionStorage.getItem('token') || '';
         if (isCollegeEditing) {
-            // Actualizar colegio
-            setColegios(colegios.map(c => c.id === collegeFormData.id ? collegeFormData : c));
-            showFeedback('success', `Colegio "${collegeFormData.nombre}" actualizado.`);
+            // PUT /colegios/:id
+            fetch(`http://localhost:3000/colegios/${collegeFormData.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                body: JSON.stringify({ nombre: collegeFormData.nombre, direccion: collegeFormData.direccion, contacto: collegeFormData.contacto, telefono: collegeFormData.telefono })
+            })
+            .then(r => {
+                if (!r.ok) throw r;
+                return r.json().catch(() => collegeFormData);
+            })
+            .then(updated => {
+                const up = updated || collegeFormData;
+                const mapped = { ...up, id: up.id || up.id_colegio || up._id || collegeFormData.id, id_colegio: up.id_colegio || up.id || up._id || collegeFormData.id };
+                setColegios(prev => prev.map(c => c.id === collegeFormData.id ? mapped : c));
+                showFeedback('success', `Colegio "${collegeFormData.nombre}" actualizado.`);
+                setShowCollegeModal(false);
+                setCollegeFormData(initialCollegeFormData);
+            })
+            .catch(err => {
+                console.error('Error actualizando colegio:', err);
+                showFeedback('error', 'No se pudo actualizar el colegio.');
+            });
         } else {
-            // Añadir nuevo colegio
-            const newCollege = { ...collegeFormData, id: Date.now().toString() };
-            setColegios([...colegios, newCollege]);
-            showFeedback('success', `Colegio "${newCollege.nombre}" registrado exitosamente.`);
+            // POST /colegios
+            fetch('http://localhost:3000/colegios', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                body: JSON.stringify({ nombre: collegeFormData.nombre, direccion: collegeFormData.direccion, contacto: collegeFormData.contacto, telefono: collegeFormData.telefono })
+            })
+            .then(r => {
+                if (!r.ok) throw r;
+                return r.json();
+            })
+            .then(created => {
+                const c = created || { ...collegeFormData, id: Date.now().toString() };
+                const toAdd = { ...c, id: c.id || c.id_colegio || c._id || Date.now().toString(), id_colegio: c.id_colegio || c.id || c._id || null };
+                setColegios(prev => [...prev, toAdd]);
+                showFeedback('success', `Colegio "${toAdd.nombre}" registrado exitosamente.`);
+                setShowCollegeModal(false);
+                setCollegeFormData(initialCollegeFormData);
+            })
+            .catch(err => {
+                console.error('Error creando colegio:', err);
+                showFeedback('error', 'No se pudo crear el colegio.');
+            });
         }
-        setShowCollegeModal(false);
-        setCollegeFormData(initialCollegeFormData);
-    };
+    }, [collegeFormData, colegios, isCollegeEditing]);
 
-    const handleEditCollege = (college) => {
+    const handleEditCollege = useCallback((college) => {
         setCollegeFormData(college);
         setIsCollegeEditing(true);
         setShowCollegeModal(true);
-    };
+    }, []);
 
-    const handleDeleteCollege = (id, nombre) => {
+    const handleDeleteCollege = useCallback((id, nombre) => {
         if (window.confirm(`¿Estás seguro de eliminar el colegio "${nombre}"? También se eliminarán sus estudiantes asociados.`)) {
-            // Eliminar colegio
-            setColegios(colegios.filter(c => c.id !== id));
-            // Eliminar estudiantes asociados
-            setEstudiantes(estudiantes.filter(s => s.collegeId !== id));
-            showFeedback('success', `Colegio "${nombre}" y sus estudiantes han sido eliminados.`);
+            const token = sessionStorage.getItem('token') || '';
+            fetch(`http://localhost:3000/colegios/${id}`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }
+            })
+            .then(r => {
+                if (!r.ok) throw r;
+                // Backend deleted; update UI
+                setColegios(prev => prev.filter(c => String(c.id) !== String(id)));
+                setEstudiantes(prev => prev.filter(s => String(s.collegeId) !== String(id)));
+                showFeedback('success', `Colegio "${nombre}" y sus estudiantes han sido eliminados.`);
+            })
+            .catch(err => {
+                console.error('Error eliminando colegio:', err);
+                showFeedback('error', 'No se pudo eliminar el colegio.');
+            });
         }
-    };
+    }, []);
     
-    const openNewCollegeModal = () => {
+    const openNewCollegeModal = useCallback(() => {
         setCollegeFormData(initialCollegeFormData);
         setIsCollegeEditing(false);
         setShowCollegeModal(true);
-    };
+    }, []);
 
     // --- LÓGICA DE BÚSQUEDA Y FILTRADO DE COLEGIOS ---
     const filteredColleges = useMemo(() => {
         const lowerCaseSearch = searchTerm.toLowerCase();
         return colegios.filter(colegio => 
             colegio.nombre.toLowerCase().includes(lowerCaseSearch) ||
-            colegio.ciudad.toLowerCase().includes(lowerCaseSearch) ||
+            (colegio.direccion || '').toLowerCase().includes(lowerCaseSearch) ||
             colegio.contacto.toLowerCase().includes(lowerCaseSearch)
         ).sort((a, b) => a.nombre.localeCompare(b.nombre));
     }, [colegios, searchTerm]);
 
     // --- RF-004: LÓGICA DE GESTIÓN DE ESTUDIANTES ---
 
-    const goToStudentManagement = (college) => {
+    const goToStudentManagement = useCallback((college) => {
         setSelectedCollege(college);
         setSearchTerm('');
         setView('manage_students');
-    };
+    }, []);
 
     const filteredStudents = useMemo(() => {
         if (!selectedCollege) return [];
-        const collegeStudents = estudiantes.filter(s => s.collegeId === selectedCollege.id);
+        const collegeStudents = estudiantes.filter(s => String(s.collegeId) === String(selectedCollege.id));
 
         const lowerCaseSearch = searchTerm.toLowerCase();
         return collegeStudents.filter(student => 
@@ -183,12 +382,11 @@ const GestionColegiosYEstudiantes = () => {
             }
 
             const studentData = {
-                id: Date.now().toString() + '-' + i, // Generar ID único
+                id: Date.now().toString() + '-' + i, // Generar ID único temporal
                 collegeId: collegeId,
                 nombre: values[headerMap['nombre']] || '',
                 ci: values[headerMap['ci']] || '',
                 email: values[headerMap['email']] || '',
-                estado: 'Activo', // Estado por defecto para nuevos
             };
             
             // Criterio de Aceptación: Validar datos incompletos
@@ -247,9 +445,35 @@ const GestionColegiosYEstudiantes = () => {
                      return;
                 }
 
-                // Actualizar el estado con los nuevos estudiantes validados
-                setEstudiantes(prev => [...prev, ...newStudents]);
-                showFeedback('success', `¡Carga de lista exitosa! Se registraron ${newStudents.length} nuevos estudiantes.`);
+                // Enviar cada estudiante al backend (POST /estudiantes)
+                const token = sessionStorage.getItem('token') || '';
+                const created = [];
+                const failed = [];
+                const promises = newStudents.map(s => {
+                    const body = { nombre: s.nombre, ci: s.ci, correo: s.email, id_colegio: s.collegeId };
+                    return fetch('http://localhost:3000/estudiantes', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                        body: JSON.stringify(body)
+                    })
+                    .then(r => r.ok ? r.json() : r.json().then(err => Promise.reject(err)))
+                    .then(createdStudent => { created.push(createdStudent); })
+                    .catch(err => { failed.push({ student: s, error: err }); });
+                });
+
+                Promise.all(promises).then(() => {
+                    if (created.length > 0) {
+                        // Normalizar y añadir
+                        const mapped = created.map(s => ({ id: s.id || s.id_estudiante || String(s.id), nombre: s.nombre, ci: s.ci, email: s.correo || s.email, collegeId: s.id_colegio }));
+                        setEstudiantes(prev => [...prev, ...mapped]);
+                    }
+                    if (failed.length > 0) {
+                        showFeedback('error', `Algunos registros fallaron: ${failed.length} errores. Revisa la consola.`);
+                        console.error('Errores al crear estudiantes desde CSV:', failed);
+                    } else {
+                        showFeedback('success', `¡Carga de lista exitosa! Se registraron ${created.length} nuevos estudiantes.`);
+                    }
+                });
 
             } catch (error) {
                 console.error("Error al procesar el archivo CSV:", error);
@@ -272,59 +496,100 @@ const GestionColegiosYEstudiantes = () => {
 
 
     // CRUD de Estudiantes
-    const handleStudentChange = (e) => {
-        setStudentFormData({ ...studentFormData, [e.target.name]: e.target.value });
-    };
+    const handleStudentChange = useCallback((e) => {
+        setStudentFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    }, []);
 
-    const handleSaveStudent = (e) => {
+    const handleSaveStudent = useCallback((e) => {
         e.preventDefault();
-        
-        // Criterio de Aceptación: Validar datos duplicados (CI)
-        const isDuplicate = estudiantes.some(s => 
-            s.ci === studentFormData.ci && s.id !== studentFormData.id
-        );
+
+        // Validar duplicados local
+        const isDuplicate = estudiantes.some(s => s.ci === studentFormData.ci && s.id !== studentFormData.id);
         if (isDuplicate) {
             showFeedback('error', `Ya existe un estudiante con el CI: ${studentFormData.ci}.`);
             return;
         }
 
-        if (isStudentEditing) {
-            // Actualizar estudiante (Criterio de Aceptación: editar estudiante)
-            setEstudiantes(estudiantes.map(s => s.id === studentFormData.id ? studentFormData : s));
-            showFeedback('success', `Estudiante "${studentFormData.nombre}" actualizado.`);
-        } else {
-            // Añadir nuevo estudiante (Criterio de Aceptación: agregar estudiante)
-            const newStudent = { 
-                ...studentFormData, 
-                id: Date.now().toString(), 
-                collegeId: selectedCollege.id // Asegurar la asociación
-            };
-            setEstudiantes([...estudiantes, newStudent]);
-            showFeedback('success', `Estudiante "${newStudent.nombre}" añadido exitosamente.`);
-        }
-        setShowStudentModal(false);
-        setStudentFormData(initialStudentFormData);
-    };
+        const token = sessionStorage.getItem('token') || '';
 
-    const handleEditStudent = (student) => {
+        if (isStudentEditing) {
+            // PUT /estudiantes/:id
+            fetch(`http://localhost:3000/estudiantes/${studentFormData.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                body: JSON.stringify({ nombre: studentFormData.nombre, ci: studentFormData.ci, correo: studentFormData.email, curso: studentFormData.curso, edad: studentFormData.edad, id_colegio: studentFormData.collegeId })
+            })
+            .then(r => {
+                if (!r.ok) throw r;
+                return r.json().catch(() => studentFormData);
+            })
+            .then(updated => {
+                const mapped = updated ? { id: updated.id || studentFormData.id, nombre: updated.nombre || studentFormData.nombre, ci: updated.ci || studentFormData.ci, email: updated.correo || studentFormData.email, collegeId: updated.id_colegio || studentFormData.collegeId, colegio: updated.colegio_nombre || studentFormData.colegio } : studentFormData;
+                setEstudiantes(prev => prev.map(s => s.id === studentFormData.id ? mapped : s));
+                showFeedback('success', `Estudiante "${mapped.nombre}" actualizado.`);
+                setShowStudentModal(false);
+                setStudentFormData(initialStudentFormData);
+            })
+            .catch(err => {
+                console.error('Error actualizando estudiante:', err);
+                showFeedback('error', 'No se pudo actualizar el estudiante.');
+            });
+        } else {
+            // POST /estudiantes
+            const body = { nombre: studentFormData.nombre, ci: studentFormData.ci, correo: studentFormData.email, id_colegio: selectedCollege.id, curso: studentFormData.curso, edad: studentFormData.edad };
+            fetch('http://localhost:3000/estudiantes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                body: JSON.stringify(body)
+            })
+            .then(r => {
+                if (!r.ok) throw r;
+                return r.json();
+            })
+            .then(created => {
+                const mapped = { id: created.id || created.id_estudiante || String(created.id) || Date.now().toString(), nombre: created.nombre || studentFormData.nombre, ci: created.ci || studentFormData.ci, email: created.correo || studentFormData.email, collegeId: created.id_colegio || selectedCollege.id, colegio: selectedCollege.nombre };
+                setEstudiantes(prev => [...prev, mapped]);
+                showFeedback('success', `Estudiante "${mapped.nombre}" añadido exitosamente.`);
+                setShowStudentModal(false);
+                setStudentFormData(initialStudentFormData);
+            })
+            .catch(err => {
+                console.error('Error creando estudiante:', err);
+                showFeedback('error', 'No se pudo crear el estudiante.');
+            });
+        }
+    }, [studentFormData, estudiantes, isStudentEditing, selectedCollege]);
+
+    const handleEditStudent = useCallback((student) => {
         setStudentFormData(student);
         setIsStudentEditing(true);
         setShowStudentModal(true);
-    };
+    }, []);
 
-    const handleDeleteStudent = (id, nombre) => {
+    const handleDeleteStudent = useCallback((id, nombre) => {
         if (window.confirm(`¿Estás seguro de que deseas eliminar a "${nombre}" de la lista?`)) {
-            // Criterio de Aceptación: eliminar estudiante
-            setEstudiantes(estudiantes.filter(s => s.id !== id));
-            showFeedback('success', `Estudiante "${nombre}" eliminado.`);
+            const token = sessionStorage.getItem('token') || '';
+            fetch(`http://localhost:3000/estudiantes/${id}`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }
+            })
+            .then(r => {
+                if (!r.ok) throw r;
+                setEstudiantes(prev => prev.filter(s => s.id !== id));
+                showFeedback('success', `Estudiante "${nombre}" eliminado.`);
+            })
+            .catch(err => {
+                console.error('Error eliminando estudiante:', err);
+                showFeedback('error', 'No se pudo eliminar el estudiante.');
+            });
         }
-    };
+    }, []);
     
-    const openNewStudentModal = () => {
+    const openNewStudentModal = useCallback(() => {
         setStudentFormData({ ...initialStudentFormData, collegeId: selectedCollege.id });
         setIsStudentEditing(false);
         setShowStudentModal(true);
-    };
+    });
 
     // --- COMPONENTES UI: MODAL DE FORMULARIO DE COLEGIO ---
 
@@ -469,44 +734,55 @@ const GestionColegiosYEstudiantes = () => {
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className={`${UCB_COLORS.primary} text-white`}>
                             <tr>
-                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider rounded-tl-xl">Nombre</th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Ubicación</th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Contacto</th>
-                                <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider rounded-tr-xl">Acciones</th>
+                                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider rounded-tl-xl">Nombre</th>
+                                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider">Dirección</th>
+                                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider">Contacto</th>
+                                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider">Teléfono</th>
+                                <th className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider rounded-tr-xl">Acciones</th>
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-100">
                             {filteredColleges.map((colegio) => (
-                                <tr key={colegio.id} className="hover:bg-gray-50 transition duration-150">
-                                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 flex items-center">
-                                        <School className="w-4 h-4 mr-2 text-[#003366]" />
-                                        {colegio.nombre}
-                                    </td>
-                                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{colegio.ciudad}</td>
-                                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
-                                        <div className="flex flex-col">
-                                            <span>{colegio.contacto}</span>
-                                            <span className="text-xs text-gray-500">{colegio.telefono}</span>
+                                <tr key={colegio.id || colegio.id_colegio || colegio.nombre} className="hover:bg-blue-50 transition duration-150">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                        <div className="flex items-center">
+                                            <School className="w-4 h-4 mr-2 text-[#003366]" />
+                                            {colegio.nombre}
                                         </div>
                                     </td>
-                                    <td className="px-4 py-3 whitespace-nowrap text-center text-sm font-medium">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                        <div className="flex items-center">
+                                            <MapPin className="w-4 h-4 mr-1 text-gray-400" />
+                                            {colegio.direccion || '-'}
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                        <div className="flex items-center">
+                                            <User className="w-4 h-4 mr-1 text-gray-400" />
+                                            {colegio.contacto || '-'}
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                        {colegio.telefono || '-'}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium space-x-2 flex justify-center">
                                         <button
                                             onClick={() => goToStudentManagement(colegio)}
-                                            className="text-indigo-600 hover:text-indigo-800 p-2 rounded-full transition duration-150"
+                                            className="text-indigo-600 hover:text-indigo-800 hover:bg-indigo-100 p-2 rounded-full transition duration-150"
                                             title="Gestionar Estudiantes"
                                         >
                                             <Users className="w-5 h-5" />
                                         </button>
                                         <button
                                             onClick={() => handleEditCollege(colegio)}
-                                            className="text-[#003366] hover:text-[#FFD700] p-2 rounded-full transition duration-150 ml-2"
+                                            className="text-[#003366] hover:text-[#FFD700] hover:bg-blue-100 p-2 rounded-full transition duration-150"
                                             title="Editar Colegio"
                                         >
                                             <Edit className="w-5 h-5" />
                                         </button>
                                         <button
                                             onClick={() => handleDeleteCollege(colegio.id, colegio.nombre)}
-                                            className="text-red-600 hover:text-red-800 p-2 rounded-full transition duration-150 ml-2"
+                                            className="text-red-600 hover:text-red-800 hover:bg-red-100 p-2 rounded-full transition duration-150"
                                             title="Eliminar Colegio"
                                         >
                                             <Trash2 className="w-5 h-5" />
@@ -605,28 +881,26 @@ const GestionColegiosYEstudiantes = () => {
                                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider rounded-tl-xl">Nombre</th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">CI</th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Email</th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Estado</th>
                                 <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider rounded-tr-xl">Acciones</th>
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-100">
                             {filteredStudents.map((student) => (
                                 <tr key={student.id} className="hover:bg-gray-50 transition duration-150">
-                                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 flex items-center">
-                                        <User className="w-4 h-4 mr-2 text-gray-500" />
-                                        {student.nombre}
+                                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                                        <div className="flex items-center">
+                                            <User className="w-4 h-4 mr-2 text-gray-500" />
+                                            <span>{student.nombre}</span>
+                                        </div>
                                     </td>
-                                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 flex items-center">
-                                        <Hash className="w-4 h-4 mr-1 text-gray-400" />
-                                        {student.ci}
+                                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                                        <div className="flex items-center">
+                                            <Hash className="w-4 h-4 mr-1 text-gray-400" />
+                                            <span>{student.ci}</span>
+                                        </div>
                                     </td>
                                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                                         {student.email}
-                                    </td>
-                                    <td className="px-4 py-3 whitespace-nowrap text-sm">
-                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${student.estado === 'Activo' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                                            {student.estado}
-                                        </span>
                                     </td>
                                     <td className="px-4 py-3 whitespace-nowrap text-center text-sm font-medium">
                                         <button
@@ -688,8 +962,22 @@ const GestionColegiosYEstudiantes = () => {
             </div>
             
             {/* Modales */}
-            <CollegeFormModal />
-            <StudentFormModal />
+            <CollegeFormModal 
+                show={showCollegeModal}
+                isEditing={isCollegeEditing}
+                formData={collegeFormData}
+                onClose={() => setShowCollegeModal(false)}
+                onSubmit={handleSaveCollege}
+                onChange={handleCollegeChange}
+            />
+            <StudentFormModal 
+                show={showStudentModal}
+                isEditing={isStudentEditing}
+                formData={studentFormData}
+                onClose={() => setShowStudentModal(false)}
+                onSubmit={handleSaveStudent}
+                onChange={handleStudentChange}
+            />
         </div>
     );
 };

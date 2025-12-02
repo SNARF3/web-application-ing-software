@@ -107,13 +107,47 @@ const StatusBadge = ({ estado }) => {
     );
 };
 
+// --- Helpers para fecha/hora ---
+// Normaliza una posible fecha que venga como ISO datetime o YYYY-MM-DD
+const normalizeFecha = (fechaRaw) => {
+    if (!fechaRaw) return '';
+    // Si contiene 'T' es probable que venga como ISO datetime
+    if (typeof fechaRaw === 'string' && fechaRaw.includes('T')) {
+        try {
+            const d = new Date(fechaRaw);
+            if (!isNaN(d)) {
+                return d.toISOString().slice(0, 10);
+            }
+        } catch (e) {
+            return fechaRaw.slice(0,10);
+        }
+    }
+    // Si ya está en formato YYYY-MM-DD, devolver tal cual
+    if (/^\d{4}-\d{2}-\d{2}$/.test(fechaRaw)) return fechaRaw;
+    // Intentar parseo suelto
+    try {
+        const d2 = new Date(fechaRaw);
+        if (!isNaN(d2)) return d2.toISOString().slice(0,10);
+    } catch (e) {}
+    return '';
+};
+
+// Formatea YYYY-MM-DD a DD/MM/YYYY para presentación
+const formatFechaDisplay = (fechaIso) => {
+    if (!fechaIso) return '';
+    const m = fechaIso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return fechaIso;
+    return `${m[3]}/${m[2]}/${m[1]}`;
+};
+
 // =======================================================
 // COMPONENTE DE PESTAÑA: REGISTRO Y EDICIÓN (RF-001, RF-002, RF-006)
 // =======================================================
-const FormularioVisita = ({ visitaToEdit, onSave, onCancel, guias }) => {
+const FormularioVisita = ({ visitaToEdit, onSave, onCancel, guias, colegios }) => {
     const isEditing = !!visitaToEdit;
     const initialFormState = {
         colegio: '',
+        id_colegio: '',
         fecha: new Date().toISOString().slice(0, 10),
         hora: '10:00',
         guiaId: guias[0]?.id || '',
@@ -139,13 +173,15 @@ const FormularioVisita = ({ visitaToEdit, onSave, onCancel, guias }) => {
     };
 
     const validateForm = () => {
-        if (!formData.colegio || !formData.fecha || !formData.hora || !formData.guiaId || !formData.estado) {
+        // For new visits require an explicit colegio selection (id_colegio). For editing legacy entries allow colegio name.
+        const colegioOk = isEditing ? (formData.colegio || formData.id_colegio) : formData.id_colegio;
+        if (!colegioOk || !formData.fecha || !formData.hora || !formData.guiaId || !formData.estado) {
             return 'Por favor, complete todos los campos obligatorios (Colegio, Fecha, Hora, Guía y Estado).';
         }
         return null;
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         const validationError = validateForm();
 
@@ -154,21 +190,106 @@ const FormularioVisita = ({ visitaToEdit, onSave, onCancel, guias }) => {
             return;
         }
 
-        // Simulación de guardado
+        // Guardado real: para nuevos registros hacemos POST a /visits
         setMessage({ type: 'info', text: isEditing ? 'Actualizando visita...' : 'Registrando nueva visita...' });
 
-        setTimeout(() => {
-            try {
-                // Lógica de guardado simulada
-                onSave(formData);
-                setMessage({ type: 'success', text: isEditing ? 'Visita actualizada con éxito.' : 'Visita registrada con éxito.' });
-                if (!isEditing) {
-                    setFormData(initialFormState); // Resetear solo si es un nuevo registro
+        try {
+            if (isEditing) {
+                // En edición, llamar al endpoint PUT /visits/:id
+                const token = sessionStorage.getItem('token') || '';
+                const updatePayload = {
+                    fecha: formData.fecha,
+                    hora: formData.hora,
+                    id_guia: formData.guiaId,
+                    estado: formData.estado,
+                    observaciones: formData.observaciones || '',
+                    id_colegio: formData.id_colegio || undefined,
+                };
+
+                try {
+                    const resUpdate = await fetch(`http://localhost:3000/visits/${formData.id}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                        },
+                        body: JSON.stringify(updatePayload),
+                    });
+
+                    if (!resUpdate.ok) {
+                        const err = await resUpdate.json().catch(() => ({ message: 'Error desconocido' }));
+                        setMessage({ type: 'error', text: `No se pudo actualizar la visita: ${err.message || resUpdate.status}` });
+                        return;
+                    }
+
+                    const updated = await resUpdate.json().catch(() => null);
+                    const updatedVisit = updated && (updated.id || updated.id_visita) ? {
+                        id: updated.id || updated.id_visita || formData.id,
+                        fecha: updated.fecha || formData.fecha,
+                        hora: (updated.hora && updated.hora.length === 8) ? updated.hora.slice(0,5) : (updated.hora || formData.hora),
+                        guiaId: updated.id_guia || formData.guiaId,
+                        guiaNombre: updated.guia_nombre || formData.guiaNombre,
+                        id_colegio: updated.id_colegio || formData.id_colegio,
+                        colegio: updated.colegio_nombre || formData.colegio,
+                        observaciones: updated.observaciones || formData.observaciones,
+                        estado: updated.estado || formData.estado,
+                    } : formData;
+
+                    onSave(updatedVisit);
+                    setMessage({ type: 'success', text: 'Visita actualizada con éxito.' });
+                    return;
+                } catch (err) {
+                    console.error('Error actualizando visita:', err);
+                    setMessage({ type: 'error', text: 'Error al actualizar la visita.' });
+                    return;
                 }
-            } catch (error) {
-                setMessage({ type: 'error', text: 'Error al procesar la solicitud de guardado.' });
             }
-        }, 1000); // Simular latencia de API
+
+            // Obtener id_usuario desde sessionStorage (usuario autenticado)
+            let userObj = null;
+            try { userObj = JSON.parse(sessionStorage.getItem('user') || 'null'); } catch (e) { userObj = null; }
+            const id_usuario = userObj?.id || userObj?.id_usuario;
+            if (!id_usuario) {
+                setMessage({ type: 'error', text: 'No se encontró usuario autenticado. Inicia sesión antes de crear una visita.' });
+                return;
+            }
+
+            const payload = {
+                fecha: formData.fecha,
+                hora: formData.hora,
+                id_guia: formData.guiaId,
+                estado: formData.estado,
+                observaciones: formData.observaciones || '',
+                id_usuario,
+                id_colegio: formData.id_colegio,
+            };
+
+            const token = sessionStorage.getItem('token') || '';
+            const res = await fetch('http://localhost:3000/visits', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
+                body: JSON.stringify(payload),
+            });
+
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({ message: 'Error desconocido' }));
+                setMessage({ type: 'error', text: `Error al crear visita: ${err.message || res.status}` });
+                return;
+            }
+
+            const created = await res.json().catch(() => null);
+            const createdVisit = created && (created.id || created.id_visita) ? created : { ...formData, id: created?.id || `v${Date.now()}` };
+
+            onSave(createdVisit);
+            setMessage({ type: 'success', text: 'Visita registrada con éxito.' });
+            setFormData(initialFormState);
+        } catch (error) {
+            console.error('Error creando visita:', error);
+            setMessage({ type: 'error', text: 'Error al procesar la solicitud de guardado.' });
+        }
     };
 
     return (
@@ -182,7 +303,7 @@ const FormularioVisita = ({ visitaToEdit, onSave, onCancel, guias }) => {
                     : 
                     <>
                         <PlusCircle className="w-6 h-6 mr-3 text-[#FFD700]" />
-                        Registrar Nueva Visita (RF-001)
+                        Registrar Nueva Visita
                     </>
                 }
             </h2>
@@ -191,18 +312,33 @@ const FormularioVisita = ({ visitaToEdit, onSave, onCancel, guias }) => {
             
             <form onSubmit={handleSubmit} className="space-y-4">
                 
-                {/* Nombre del Colegio */}
+                {/* Nombre del Colegio (selección desde API) */}
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Colegio / Institución (*)</label>
-                    <input
-                        type="text"
-                        name="colegio"
-                        value={formData.colegio}
-                        onChange={handleChange}
-                        className={`w-full p-3 border border-gray-300 rounded-lg ${COLORS.focusAccent}/50 focus:border-[#003366] transition duration-150`}
-                        placeholder="Ej: Colegio Don Bosco"
-                        required
-                    />
+                    {colegios && colegios.length > 0 ? (
+                        <select
+                            name="id_colegio"
+                            value={formData.id_colegio}
+                            onChange={handleChange}
+                            className={`w-full p-3 border border-gray-300 rounded-lg ${COLORS.focusAccent}/50 focus:border-[#003366] transition duration-150`}
+                            required
+                        >
+                            <option value="">Seleccione un colegio</option>
+                            {colegios.map(c => (
+                                <option key={c.id_colegio} value={c.id_colegio}>{c.nombre}</option>
+                            ))}
+                        </select>
+                    ) : (
+                        <input
+                            type="text"
+                            name="colegio"
+                            value={formData.colegio}
+                            onChange={handleChange}
+                            className={`w-full p-3 border border-gray-300 rounded-lg ${COLORS.focusAccent}/50 focus:border-[#003366] transition duration-150`}
+                            placeholder="Ej: Colegio Don Bosco"
+                            required
+                        />
+                    )}
                 </div>
 
                 {/* Fecha y Hora */}
@@ -248,7 +384,7 @@ const FormularioVisita = ({ visitaToEdit, onSave, onCancel, guias }) => {
                         </select>
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Estado de Visita (RF-007) (*)</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Estado de Visita (*)</label>
                         <select
                             name="estado"
                             value={formData.estado}
@@ -299,7 +435,7 @@ const FormularioVisita = ({ visitaToEdit, onSave, onCancel, guias }) => {
                         ) : (
                             <Save className="w-5 h-5 mr-2" />
                         )}
-                        {isEditing ? 'Guardar Cambios (RF-002)' : 'Registrar Visita (RF-001)'}
+                        {isEditing ? 'Guardar Cambios' : 'Registrar Visita'}
                     </button>
                 </div>
             </form>
@@ -310,9 +446,10 @@ const FormularioVisita = ({ visitaToEdit, onSave, onCancel, guias }) => {
 // =======================================================
 // COMPONENTE DE PESTAÑA: HISTORIAL Y GESTIÓN (RF-005, RF-002)
 // =======================================================
-const HistorialVisitas = ({ visitas, guias, onEdit, onDelete, onUpdateStatus }) => {
+const HistorialVisitas = ({ visitas, guias, colegios, onEdit, onDelete, onUpdateStatus }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterGuia, setFilterGuia] = useState('');
+    const [filterColegio, setFilterColegio] = useState('');
     const [filterEstado, setFilterEstado] = useState('');
     const [message, setMessage] = useState({ type: null, text: null });
 
@@ -328,49 +465,83 @@ const HistorialVisitas = ({ visitas, guias, onEdit, onDelete, onUpdateStatus }) 
     const filteredVisitas = useMemo(() => {
         return visitas
             .filter(visita => {
+                const colegioText = (visita.colegio || '').toLowerCase();
+                const guiaText = (visita.guiaNombre || guiaMap[visita.guiaId] || '').toLowerCase();
                 const searchMatch = (
-                    visita.colegio.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    guiaMap[visita.guiaId].toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    visita.fecha.includes(searchTerm)
+                    colegioText.includes(searchTerm.toLowerCase()) ||
+                    guiaText.includes(searchTerm.toLowerCase()) ||
+                    (visita.fecha || '').includes(searchTerm)
                 );
-                
-                const guiaMatch = filterGuia ? visita.guiaId === filterGuia : true;
+
+                const guiaMatch = filterGuia ? String(visita.guiaId) === String(filterGuia) : true;
+                const colegioMatch = filterColegio ? String(visita.id_colegio) === String(filterColegio) : true;
                 const estadoMatch = filterEstado ? visita.estado === filterEstado : true;
 
-                return searchMatch && guiaMatch && estadoMatch;
+                return searchMatch && guiaMatch && colegioMatch && estadoMatch;
             })
-            // Opcional: Ordenar por fecha más reciente primero
+            // Ordenar por fecha más reciente primero
             .sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
-    }, [visitas, searchTerm, filterGuia, filterEstado, guiaMap]);
+    }, [visitas, searchTerm, filterGuia, filterColegio, filterEstado, guiaMap]);
 
-    // Simulación de eliminación (RF-002)
-    const handleDelete = (visita) => {
-        if (window.confirm(`¿Está seguro de que desea eliminar la visita del ${visita.colegio} el ${visita.fecha}? (RF-002)`)) {
-            // Aquí iría la llamada a la API
-            setMessage({ type: 'info', text: 'Eliminando visita...' });
-            setTimeout(() => {
-                onDelete(visita.id);
-                setMessage({ type: 'success', text: `Visita de ${visita.colegio} eliminada con éxito.` });
-            }, 500);
+    // Eliminación real via API (RF-002)
+    const handleDelete = async (visita) => {
+        if (!window.confirm(`¿Está seguro de que desea eliminar la visita del ${visita.colegio} el ${visita.fecha}?`)) return;
+        setMessage({ type: 'info', text: 'Eliminando visita...' });
+        try {
+            const token = sessionStorage.getItem('token') || '';
+            const res = await fetch(`http://localhost:3000/visits/${visita.id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                }
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({ message: 'Error desconocido' }));
+                setMessage({ type: 'error', text: `No se pudo eliminar la visita: ${err.message || res.status}` });
+                return;
+            }
+            onDelete(visita.id);
+            setMessage({ type: 'success', text: `Visita de ${visita.colegio} eliminada con éxito.` });
+        } catch (err) {
+            console.error('Error eliminando visita:', err);
+            setMessage({ type: 'error', text: 'Error al eliminar la visita.' });
         }
     };
 
     // Manejo de cambio de estado rápido (RF-007)
-    const handleStatusChange = (visitaId, newStatus) => {
-        // Aquí iría la llamada a la API
+    const handleStatusChange = async (visitaId, newStatus) => {
         setMessage({ type: 'info', text: 'Actualizando estado...' });
-        setTimeout(() => {
+        try {
+            const token = sessionStorage.getItem('token') || '';
+            const res = await fetch(`http://localhost:3000/visits/${visitaId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
+                body: JSON.stringify({ estado: newStatus })
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({ message: 'Error desconocido' }));
+                setMessage({ type: 'error', text: `No se pudo actualizar estado: ${err.message || res.status}` });
+                return;
+            }
+            // Actualizar en memoria
             onUpdateStatus(visitaId, newStatus);
             const statusLabel = ESTADOS_VISITA.find(e => e.value === newStatus)?.label;
             setMessage({ type: 'success', text: `Estado de la visita ${visitaId} actualizado a "${statusLabel}".` });
-        }, 500);
+        } catch (err) {
+            console.error('Error actualizando estado:', err);
+            setMessage({ type: 'error', text: 'Error actualizando estado de la visita.' });
+        }
     };
 
     return (
         <div className="bg-white p-6 rounded-xl shadow-2xl border-t-8 border-[#FFD700] lg:col-span-2">
             <h2 className={`text-2xl font-bold mb-6 ${COLORS.textDark} flex items-center`}>
                 <ClipboardList className="w-6 h-6 mr-3 text-[#003366]" />
-                Historial de Visitas Programadas (RF-005)
+                Historial de Visitas Programadas
             </h2>
 
             <CustomAlert message={message.text} type={message.type} onClose={() => setMessage({ type: null, text: null })} />
@@ -404,6 +575,20 @@ const HistorialVisitas = ({ visitas, guias, onEdit, onDelete, onUpdateStatus }) 
                         ))}
                     </select>
                 </div>
+                {/* Filtro por Colegio */}
+                <div className="md:w-1/4 relative">
+                    <User className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+                    <select
+                        value={filterColegio}
+                        onChange={(e) => setFilterColegio(e.target.value)}
+                        className={`w-full p-3 pl-10 border border-gray-300 rounded-lg focus:border-[#003366] ${COLORS.focusAccent}/50 transition duration-150 appearance-none bg-white`}
+                    >
+                        <option value="">Todos los Colegios</option>
+                        {colegios && colegios.map(c => (
+                            <option key={c.id_colegio} value={c.id_colegio}>{c.nombre}</option>
+                        ))}
+                    </select>
+                </div>
                 
                 {/* Filtro por Estado (RF-007) */}
                 <div className="md:w-1/4 relative">
@@ -427,10 +612,11 @@ const HistorialVisitas = ({ visitas, guias, onEdit, onDelete, onUpdateStatus }) 
                     <thead className={COLORS.primary}>
                         <tr>
                             <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Colegio</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Fecha / Hora</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Guía (RF-006)</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Estado (RF-007)</th>
-                            <th className="px-6 py-3 text-right text-xs font-medium text-white uppercase tracking-wider">Acciones (RF-002)</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Fecha</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Hora</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Guía</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Estado</th>
+                            <th className="px-6 py-3 text-right text-xs font-medium text-white uppercase tracking-wider">Acciones</th>
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-100">
@@ -442,10 +628,13 @@ const HistorialVisitas = ({ visitas, guias, onEdit, onDelete, onUpdateStatus }) 
                                         <p className="text-xs text-gray-500 truncate mt-1 max-w-xs">{visita.observaciones || 'Sin observaciones.'}</p>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {visita.fecha} @ {visita.hora}
+                                        {formatFechaDisplay(visita.fecha)}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {visita.hora}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                                        {guiaMap[visita.guiaId] || 'Guía Desconocido'}
+                                        {visita.guiaNombre || guiaMap[visita.guiaId] || 'Guía Desconocido'}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="flex items-center space-x-2">
@@ -469,14 +658,14 @@ const HistorialVisitas = ({ visitas, guias, onEdit, onDelete, onUpdateStatus }) 
                                             <button 
                                                 onClick={() => onEdit(visita)} 
                                                 className={`text-[#003366] hover:text-blue-700 p-2 rounded-full transition hover:bg-gray-100`}
-                                                title="Editar Visita (RF-002)"
+                                                title="Editar Visita"
                                             >
                                                 <Edit className="w-5 h-5" />
                                             </button>
                                             <button 
                                                 onClick={() => handleDelete(visita)} 
                                                 className="text-red-600 hover:text-red-800 p-2 rounded-full transition hover:bg-red-50"
-                                                title="Eliminar Visita (RF-002)"
+                                                title="Eliminar Visita"
                                             >
                                                 <Trash2 className="w-5 h-5" />
                                             </button>
@@ -486,7 +675,7 @@ const HistorialVisitas = ({ visitas, guias, onEdit, onDelete, onUpdateStatus }) 
                             ))
                         ) : (
                             <tr>
-                                <td colSpan="5" className="px-6 py-8 text-center text-gray-500 italic">
+                                <td colSpan="6" className="px-6 py-8 text-center text-gray-500 italic">
                                     No se encontraron visitas que coincidan con los filtros aplicados.
                                 </td>
                             </tr>
@@ -504,8 +693,10 @@ const HistorialVisitas = ({ visitas, guias, onEdit, onDelete, onUpdateStatus }) 
 // =======================================================
 
 const GestionVisitas = () => {
-    // Estado de la base de datos simulada
-    const [visitas, setVisitas] = useState(initialVisitas);
+    // Estado de visitas (se cargan desde backend)
+    const [visitas, setVisitas] = useState([]);
+    const [colegios, setColegios] = useState([]);
+    const [guiasList, setGuiasList] = useState([]);
     // Estado para saber si estamos editando o registrando
     const [visitaToEdit, setVisitaToEdit] = useState(null);
     // Estado para controlar las pestañas
@@ -526,13 +717,14 @@ const GestionVisitas = () => {
     // Lógica para guardar o actualizar una visita (RF-001, RF-002)
     const handleSave = (formData) => {
         if (formData.id) {
-            // Actualizar (RF-002)
+            // Actualizar en memoria (se espera que FormularioVisita haga PUT al backend)
             setVisitas(prev => prev.map(v => v.id === formData.id ? { ...v, ...formData } : v));
             setVisitaToEdit(null); // Terminar edición
             setActiveTab('historial');
         } else {
-            // Registrar nuevo (RF-001)
-            const newVisita = { ...formData, id: `v${Date.now()}` };
+            // Registrar nuevo (creado por la API y retornado a onSave)
+            const colegioNombre = formData.id_colegio ? (colegios.find(c => c.id_colegio === formData.id_colegio)?.nombre || formData.colegio) : formData.colegio;
+            const newVisita = { ...formData, colegio: colegioNombre, id: formData.id || `v${Date.now()}` };
             setVisitas(prev => [newVisita, ...prev]);
         }
     };
@@ -546,6 +738,68 @@ const GestionVisitas = () => {
     const handleUpdateStatus = (id, newStatus) => {
         setVisitas(prev => prev.map(v => v.id === id ? { ...v, estado: newStatus } : v));
     };
+
+    // Cargar colegios y guías simples desde el backend
+    useEffect(() => {
+        const token = sessionStorage.getItem('token') || '';
+
+        // Colegios
+        fetch('http://localhost:3000/colegios/simple', {
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            }
+        })
+        .then(r => r.ok ? r.json() : Promise.resolve([]))
+        .then(data => {
+            if (Array.isArray(data)) setColegios(data);
+        })
+        .catch(err => console.error('Error cargando colegios:', err));
+
+        // Guías
+        fetch('http://localhost:3000/guias/simple', {
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            }
+        })
+        .then(r => r.ok ? r.json() : Promise.resolve([]))
+        .then(data => {
+            if (Array.isArray(data)) {
+                // Map backend shape { id_guia, nombre, apellido } to { id, name }
+                const mapped = data.map(g => ({ id: g.id_guia, name: `${g.nombre} ${g.apellido}` }));
+                setGuiasList(mapped);
+            }
+        })
+        .catch(err => console.error('Error cargando guías:', err));
+        
+        // Visitas
+        fetch('http://localhost:3000/visits', {
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            }
+        })
+        .then(r => r.ok ? r.json() : Promise.resolve([]))
+        .then(data => {
+                if (Array.isArray(data)) {
+                // Normalizar visitas a la forma usada por la UI
+                const mapped = data.map(v => ({
+                    id: v.id || v.id_visita || v._id || String(v.id) || `v${Date.now()}${Math.random()}`,
+                    fecha: normalizeFecha(v.fecha),
+                    hora: v.hora && v.hora.length === 8 ? v.hora.slice(0,5) : (v.hora || ''),
+                    guiaId: v.id_guia || v.guiaId || v.guia_id,
+                    guiaNombre: v.guia_nombre || `${v.guia_nombre || ''}`,
+                    id_colegio: v.id_colegio || v.colegioId,
+                    colegio: v.colegio_nombre || v.colegio || v.nombre_colegio || '',
+                    observaciones: v.observaciones || v.notas || '',
+                    estado: v.estado || 'Programada',
+                }));
+                setVisitas(mapped);
+            }
+        })
+        .catch(err => console.error('Error cargando visitas:', err));
+    }, []);
 
 
     return (
@@ -582,7 +836,7 @@ const GestionVisitas = () => {
                     }`}
                 >
                     <ClipboardList className="w-5 h-5 mr-2" />
-                    Historial y Gestión (RF-005, RF-002, RF-007)
+                    Historial y Gestión
                 </button>
                 <button
                     onClick={() => setActiveTab('formulario')}
@@ -593,9 +847,9 @@ const GestionVisitas = () => {
                     }`}
                 >
                     {visitaToEdit ? 
-                        <><Edit className="w-5 h-5 mr-2" /> Editar Visita (RF-002)</> 
+                        <><Edit className="w-5 h-5 mr-2" /> Editar Visita</> 
                         : 
-                        <><PlusCircle className="w-5 h-5 mr-2" /> Registrar Nueva (RF-001)</>
+                        <><PlusCircle className="w-5 h-5 mr-2" /> Registrar Nueva</>
                     }
                 </button>
             </div>
@@ -608,7 +862,8 @@ const GestionVisitas = () => {
                             visitaToEdit={visitaToEdit} 
                             onSave={handleSave} 
                             onCancel={handleCancelEdit} 
-                            guias={GUIAS_DISPONIBLES} 
+                            guias={guiasList}
+                            colegios={colegios}
                         />
                     </div>
                 )}
@@ -617,7 +872,8 @@ const GestionVisitas = () => {
                     <div className="lg:col-span-3">
                         <HistorialVisitas 
                             visitas={visitas} 
-                            guias={GUIAS_DISPONIBLES} 
+                            guias={guiasList} 
+                            colegios={colegios}
                             onEdit={handleEdit} 
                             onDelete={handleDelete}
                             onUpdateStatus={handleUpdateStatus}
