@@ -8,6 +8,7 @@ import GestionCuentas from './GestionCuentas';
 import GestionContrasenas from './GestionContrasenas';
 import GestionColegiosYEstudiantes from './GestionColegiosYEstudiantes';
 import GestionVisitas from './GestionVisitas';
+import Feedback from './Feedback';
 import UCBHome from './UCBHome';
 import { useNavigate } from 'react-router-dom';
 
@@ -428,6 +429,9 @@ const ColaboradorHome = () => {
 
                 {/* Componente Gestión de Visitas */}
                 {activeModule === 'Gestión de Visitas' && <GestionVisitas />}
+
+                {/* Componente Feedback y Encuestas */}
+                {activeModule === 'Feedback y Encuestas' && <Feedback />}
                 
                 {/* 5. Vista de Métricas Rápidas (Solo en Dashboard) */}
                 {activeModule === 'Dashboard' && (

@@ -339,7 +339,7 @@ const GestionColegiosYEstudiantes = () => {
                     <div className="flex justify-between items-center pb-4 border-b border-gray-200">
                         <h3 className={`${UCB_COLORS.primaryText} text-2xl font-extrabold flex items-center`}>
                             {isCollegeEditing ? <Edit className="w-6 h-6 mr-2" /> : <Plus className="w-6 h-6 mr-2" />}
-                            {isCollegeEditing ? 'Editar Colegio (RF-003)' : 'Registrar Nuevo Colegio (RF-003)'}
+                            {isCollegeEditing ? 'Editar Colegio' : 'Registrar Nuevo Colegio'}
                         </h3>
                         <button onClick={() => setShowCollegeModal(false)} className="text-gray-400 hover:text-red-500 p-1 rounded-full hover:bg-red-50">
                             <X className="w-6 h-6" />
@@ -391,7 +391,7 @@ const GestionColegiosYEstudiantes = () => {
                     <div className="flex justify-between items-center pb-4 border-b border-gray-200">
                         <h3 className={`${UCB_COLORS.primaryText} text-xl font-extrabold flex items-center`}>
                             {isStudentEditing ? <Edit className="w-5 h-5 mr-2" /> : <UserPlus className="w-5 h-5 mr-2" />}
-                            {isStudentEditing ? 'Editar Estudiante' : 'Añadir Estudiante (RF-004)'}
+                            {isStudentEditing ? 'Editar Estudiante' : 'Añadir Estudiante'}
                         </h3>
                         <button onClick={() => setShowStudentModal(false)} className="text-gray-400 hover:text-red-500 p-1 rounded-full hover:bg-red-50">
                             <X className="w-5 h-5" />
@@ -678,7 +678,7 @@ const GestionColegiosYEstudiantes = () => {
                     <School className={`w-8 h-8 sm:w-10 sm:h-10 mr-3 ${UCB_COLORS.accentText}`} />
                     Módulo de Gestión de Afiliados
                 </h1>
-                <p className="text-gray-600 text-lg">Administración de colegios y listas de estudiantes (RF-003, RF-004).</p>
+                <p className="text-gray-600 text-lg">Administración de colegios y listas de estudiantes.</p>
             </header>
 
             <div className="bg-white rounded-xl shadow-2xl p-4 sm:p-6 lg:p-8">
