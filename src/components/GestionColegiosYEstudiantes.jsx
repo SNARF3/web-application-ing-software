@@ -589,7 +589,115 @@ const GestionColegiosYEstudiantes = () => {
         setStudentFormData({ ...initialStudentFormData, collegeId: selectedCollege.id });
         setIsStudentEditing(false);
         setShowStudentModal(true);
-    }, [selectedCollege]);
+    });
+
+    // --- COMPONENTES UI: MODAL DE FORMULARIO DE COLEGIO ---
+
+    const CollegeFormModal = () => {
+        if (!showCollegeModal) return null;
+        return (
+            <div className="fixed inset-0 z-50 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4" onClick={() => setShowCollegeModal(false)}>
+                <div 
+                    className="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 transform transition-all duration-300 scale-100"
+                    onClick={e => e.stopPropagation()}
+                >
+                    <div className="flex justify-between items-center pb-4 border-b border-gray-200">
+                        <h3 className={`${UCB_COLORS.primaryText} text-2xl font-extrabold flex items-center`}>
+                            {isCollegeEditing ? <Edit className="w-6 h-6 mr-2" /> : <Plus className="w-6 h-6 mr-2" />}
+                            {isCollegeEditing ? 'Editar Colegio' : 'Registrar Nuevo Colegio'}
+                        </h3>
+                        <button onClick={() => setShowCollegeModal(false)} className="text-gray-400 hover:text-red-500 p-1 rounded-full hover:bg-red-50">
+                            <X className="w-6 h-6" />
+                        </button>
+                    </div>
+
+                    <form onSubmit={handleSaveCollege} className="mt-4 space-y-4">
+                        {/* Campo Nombre */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Nombre del Colegio</label>
+                            <input type="text" name="nombre" value={collegeFormData.nombre} onChange={handleCollegeChange} placeholder="Nombre" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFD700]" required />
+                        </div>
+                        {/* Campo Ciudad */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 flex items-center"><MapPin className='w-4 h-4 mr-1 text-gray-500'/> Ubicación (Ciudad)</label>
+                            <input type="text" name="ciudad" value={collegeFormData.ciudad} onChange={handleCollegeChange} placeholder="Ej: La Paz" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFD700]" required />
+                        </div>
+                        {/* Campo Contacto */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 flex items-center"><User className='w-4 h-4 mr-1 text-gray-500'/> Persona de Contacto</label>
+                            <input type="text" name="contacto" value={collegeFormData.contacto} onChange={handleCollegeChange} placeholder="Ej: Lic. María Durán" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFD700]" required />
+                        </div>
+                        {/* Campo Teléfono */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Teléfono</label>
+                            <input type="tel" name="telefono" value={collegeFormData.telefono} onChange={handleCollegeChange} placeholder="Ej: 77712345" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFD700]" required />
+                        </div>
+
+                        <button type="submit" className={`w-full p-3 rounded-lg font-bold flex items-center justify-center transition duration-200 ${UCB_COLORS.buttonPrimary} text-white`}>
+                            <Save className="w-5 h-5 mr-2" />
+                            {isCollegeEditing ? 'Guardar Cambios' : 'Registrar Colegio'}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        );
+    };
+    
+    // --- COMPONENTES UI: MODAL DE FORMULARIO DE ESTUDIANTE ---
+
+    const StudentFormModal = () => {
+        if (!showStudentModal) return null;
+        return (
+            <div className="fixed inset-0 z-50 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4" onClick={() => setShowStudentModal(false)}>
+                <div 
+                    className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 transform transition-all duration-300 scale-100"
+                    onClick={e => e.stopPropagation()}
+                >
+                    <div className="flex justify-between items-center pb-4 border-b border-gray-200">
+                        <h3 className={`${UCB_COLORS.primaryText} text-xl font-extrabold flex items-center`}>
+                            {isStudentEditing ? <Edit className="w-5 h-5 mr-2" /> : <UserPlus className="w-5 h-5 mr-2" />}
+                            {isStudentEditing ? 'Editar Estudiante' : 'Añadir Estudiante'}
+                        </h3>
+                        <button onClick={() => setShowStudentModal(false)} className="text-gray-400 hover:text-red-500 p-1 rounded-full hover:bg-red-50">
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
+
+                    <form onSubmit={handleSaveStudent} className="mt-4 space-y-4">
+                        {/* Campo Nombre */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Nombre Completo</label>
+                            <input type="text" name="nombre" value={studentFormData.nombre} onChange={handleStudentChange} placeholder="Nombre y Apellido" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFD700]" required />
+                        </div>
+                        {/* Campo CI */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 flex items-center"><FileText className='w-4 h-4 mr-1 text-gray-500'/> Cédula de Identidad (CI)</label>
+                            <input type="text" name="ci" value={studentFormData.ci} onChange={handleStudentChange} placeholder="Ej: 1234567LP" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFD700]" required />
+                        </div>
+                        {/* Campo Email */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 flex items-center"><Mail className='w-4 h-4 mr-1 text-gray-500'/> Email</label>
+                            <input type="email" name="email" value={studentFormData.email} onChange={handleStudentChange} placeholder="ejemplo@correo.com" className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFD700]" required />
+                        </div>
+                        {/* Campo Estado */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Estado</label>
+                            <select name="estado" value={studentFormData.estado} onChange={handleStudentChange} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FFD700] bg-white" required>
+                                <option value="Activo">Activo</option>
+                                <option value="Inactivo">Inactivo</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" className={`w-full p-3 rounded-lg font-bold flex items-center justify-center transition duration-200 ${UCB_COLORS.buttonPrimary} text-white`}>
+                            <Save className="w-5 h-5 mr-2" />
+                            {isStudentEditing ? 'Guardar Cambios' : 'Registrar Estudiante'}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        );
+    };
+
 
     // --- COMPONENTE DE PANTALLA: LISTA DE COLEGIOS (RF-003) ---
 
@@ -844,7 +952,7 @@ const GestionColegiosYEstudiantes = () => {
                     <School className={`w-8 h-8 sm:w-10 sm:h-10 mr-3 ${UCB_COLORS.accentText}`} />
                     Módulo de Gestión de Afiliados
                 </h1>
-                <p className="text-gray-600 text-lg">Administración de colegios y listas de estudiantes (RF-003, RF-004).</p>
+                <p className="text-gray-600 text-lg">Administración de colegios y listas de estudiantes.</p>
             </header>
 
             <div className="bg-white rounded-xl shadow-2xl p-4 sm:p-6 lg:p-8">
