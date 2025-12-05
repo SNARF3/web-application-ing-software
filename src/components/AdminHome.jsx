@@ -11,6 +11,7 @@ import GestionVisitas from './GestionVisitas';
 import Feedback from './Feedback';
 import UCBHome from './UCBHome';
 import { useNavigate } from 'react-router-dom';
+import Dashboard from './Dashboards';
 
 // Colores institucionales y tema de la interfaz
 const COLORS = {
@@ -427,6 +428,8 @@ const AdminHome = () => {
 
                 {/* Componente Feedback y Encuestas */},
                 {activeModule === 'Feedback y Encuestas' && <Feedback />}
+
+                {activeModule === 'Reportes y Métricas' && <Dashboard />}   
                 
                 {/* 5. Vista de Métricas Rápidas (Solo en Inicio) */}
                 {activeModule === 'Inicio' && (
