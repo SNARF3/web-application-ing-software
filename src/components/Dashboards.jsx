@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
     School, Users, Calendar, FileText, TrendingUp, TrendingDown, 
     Clock, CheckCircle, XCircle, AlertTriangle, Eye, UserCheck,
@@ -6,8 +6,14 @@ import {
     Filter, Printer, MoreVertical, ChevronDown, ChevronUp, Info,
     Target, PieChart, LineChart, Map, Home, ArrowUpRight, ArrowDownRight,
     Award, Star, TrendingUp as TrendingUpIcon, Globe, ChevronRight,
-    Zap, Activity as ActivityIcon, TrendingDown as TrendingDownIcon
+    Zap, Activity as ActivityIcon, TrendingDown as TrendingDownIcon,
+    FileSpreadsheet, File as FilePdfIcon // Nuevos iconos importados
 } from 'lucide-react';
+
+// --- IMPORTAR LIBRERÍAS PARA EXPORTACIÓN ---
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+import * as XLSX from 'xlsx';
 
 // --- CONFIGURACIÓN DE ESTILOS UCB ---
 const UCB_COLORS = {
@@ -21,7 +27,7 @@ const UCB_COLORS = {
     cardBg: 'bg-gradient-to-br from-white to-gray-50',
 };
 
-// Función para generar datos simulados según el rango de tiempo
+// ... (La función generateTimeRangeData se mantiene igual)
 const generateTimeRangeData = (timeRange, baseData) => {
     const now = new Date();
     let labels = [];
@@ -30,40 +36,35 @@ const generateTimeRangeData = (timeRange, baseData) => {
     
     switch(timeRange) {
         case 'hoy':
-            // Datos por hora para hoy
             title = 'Visitas por Hora (Hoy)';
             labels = Array.from({length: 12}, (_, i) => `${i+8}:00`);
             values = Array.from({length: 12}, () => Math.floor(Math.random() * 20) + 5);
             break;
-            
         case 'semana':
-            // Datos por día de la semana
             title = 'Visitas por Día (Esta Semana)';
             labels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
             values = Array.from({length: 7}, () => Math.floor(Math.random() * 30) + 10);
             break;
-            
         case 'mes':
-            // Datos por semana del mes
             title = 'Visitas por Semana (Este Mes)';
             labels = ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'];
             values = Array.from({length: 4}, () => Math.floor(Math.random() * 50) + 20);
             break;
-            
         case 'anio':
         default:
-            // Datos por mes del año
             title = 'Visitas por Mes (Último Año)';
             const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
             labels = meses;
             values = meses.map(() => Math.floor(Math.random() * 60) + 15);
             break;
     }
-    
     return { labels, values, title };
 };
 
 const Dashboard = () => {
+    // Referencia para capturar el PDF
+    const dashboardRef = useRef(null);
+
     // --- ESTADOS PARA LOS DATOS DEL DASHBOARD ---
     const [dashboardData, setDashboardData] = useState({
         totalColegios: 0,
@@ -90,7 +91,6 @@ const Dashboard = () => {
 
     const [loading, setLoading] = useState(true);
     const [timeRange, setTimeRange] = useState('semana');
-    const [exporting, setExporting] = useState(false);
     const [expandedSection, setExpandedSection] = useState('general');
     const [error, setError] = useState(null);
     const [chartData, setChartData] = useState({
@@ -98,6 +98,11 @@ const Dashboard = () => {
         values: [],
         title: 'Visitas por Mes (Último Año)'
     });
+    
+    // Estados para controlar el menú de exportación
+    const [showExportMenu, setShowExportMenu] = useState(false);
+    const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+    const [isGeneratingExcel, setIsGeneratingExcel] = useState(false);
 
     // --- GENERAR DATOS DE GRÁFICA SEGÚN RANGO DE TIEMPO ---
     useEffect(() => {
@@ -113,6 +118,19 @@ const Dashboard = () => {
             const token = sessionStorage.getItem('token') || '';
 
             try {
+                // NOTA: Para pruebas, si no tienes el backend levantado, puedes descomentar esto:
+                // Simulacion de datos si falla el fetch
+                /*
+                const mockData = {
+                    totalColegios: 120, totalEstudiantes: 3500, totalVisitas: 450,
+                    visitasHoy: 5, visitasProgramadas: 15, visitasEnCurso: 2, visitasFinalizadas: 400, visitasCanceladas: 33,
+                    estudiantesPorColegio: [{nombre: 'Colegio A', cantidad: 100, direccion: 'Zona Sur'}, {nombre: 'Colegio B', cantidad: 80, direccion: 'Centro'}],
+                    visitasRecientes: [{id: 1, colegio: 'San Ignacio', guia: 'Juan Perez', estado: 'Finalizada', fecha: '2023-10-20', hora: '10:00'}],
+                    metricasGenerales: { tasaConversion: '85%', tiempoPromedioVisita: '2h 30m' }
+                };
+                setDashboardData(mockData); setLoading(false); return; 
+                */
+
                 const response = await fetch('http://localhost:3000/api/dashboard', {
                     headers: {
                         'Content-Type': 'application/json',
@@ -126,7 +144,6 @@ const Dashboard = () => {
                         setDashboardData(result.data);
                     } else {
                         setError(result.message || 'Error en la respuesta del servidor');
-                        console.error('Error en la respuesta del dashboard:', result.message);
                     }
                 } else if (response.status === 403) {
                     setError('No tienes permisos para acceder al dashboard');
@@ -144,70 +161,122 @@ const Dashboard = () => {
         };
 
         fetchDashboardData();
-        
-        // Actualizar cada 5 minutos
         const interval = setInterval(fetchDashboardData, 300000);
         return () => clearInterval(interval);
-    }, []); // Se ejecuta solo al montar el componente
+    }, []);
 
     // --- FUNCIONES AUXILIARES ---
     const formatDate = (dateString) => {
         if (!dateString) return 'Fecha no disponible';
         const date = new Date(dateString);
-        return date.toLocaleDateString('es-ES', {
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric'
-        });
+        return date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
     };
 
     const formatTime = (timeString) => {
         if (!timeString) return 'Hora no disponible';
-        return timeString.substring(0, 5); // Formato HH:MM
+        return timeString.substring(0, 5);
     };
 
-    const handleExport = async () => {
-        setExporting(true);
-        const token = sessionStorage.getItem('token') || '';
-        
+    // --- LÓGICA DE EXPORTACIÓN A EXCEL ---
+    const handleDownloadExcel = () => {
+        setIsGeneratingExcel(true);
+        setShowExportMenu(false);
+
         try {
-            const response = await fetch('http://localhost:3000/api/dashboard/export', {
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-            
-            if (response.ok) {
-                const result = await response.json();
-                if (result.success) {
-                    const dataStr = JSON.stringify(result.data, null, 2);
-                    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-                    
-                    const exportFileDefaultName = `dashboard_${new Date().toISOString().split('T')[0]}.json`;
-                    
-                    const linkElement = document.createElement('a');
-                    linkElement.setAttribute('href', dataUri);
-                    linkElement.setAttribute('download', exportFileDefaultName);
-                    linkElement.click();
-                    
-                    alert('Reporte exportado exitosamente');
-                } else {
-                    alert('Error al exportar el reporte: ' + result.message);
-                }
-            } else {
-                alert('Error al conectar con el servidor para exportar');
+            const wb = XLSX.utils.book_new();
+            const dateStr = new Date().toISOString().split('T')[0];
+
+            // 1. Hoja de Resumen (KPIs)
+            const kpiData = [
+                { Métrica: 'Total Colegios', Valor: dashboardData.totalColegios },
+                { Métrica: 'Total Estudiantes', Valor: dashboardData.totalEstudiantes },
+                { Métrica: 'Total Visitas', Valor: dashboardData.totalVisitas },
+                { Métrica: 'Visitas Programadas', Valor: dashboardData.visitasProgramadas },
+                { Métrica: 'Visitas Finalizadas', Valor: dashboardData.visitasFinalizadas },
+                { Métrica: 'Tasa de Conversión', Valor: dashboardData.metricasGenerales?.tasaConversion || '0%' },
+                { Métrica: 'Satisfacción Promedio', Valor: dashboardData.satisfaccionPromedio || 0 },
+            ];
+            const wsKpi = XLSX.utils.json_to_sheet(kpiData);
+            XLSX.utils.book_append_sheet(wb, wsKpi, "Resumen General");
+
+            // 2. Hoja de Visitas Recientes
+            if (dashboardData.visitasRecientes && dashboardData.visitasRecientes.length > 0) {
+                const wsVisitas = XLSX.utils.json_to_sheet(dashboardData.visitasRecientes);
+                XLSX.utils.book_append_sheet(wb, wsVisitas, "Detalle Visitas");
             }
+
+            // 3. Hoja de Colegios Top
+            if (dashboardData.estudiantesPorColegio && dashboardData.estudiantesPorColegio.length > 0) {
+                const wsColegios = XLSX.utils.json_to_sheet(dashboardData.estudiantesPorColegio);
+                XLSX.utils.book_append_sheet(wb, wsColegios, "Top Colegios");
+            }
+
+            // Guardar archivo
+            XLSX.writeFile(wb, `Reporte_UCB_${dateStr}.xlsx`);
         } catch (error) {
-            console.error('Error exportando reporte:', error);
-            alert('Error al exportar el reporte');
+            console.error("Error al generar Excel:", error);
+            alert("Hubo un error al generar el archivo Excel.");
         } finally {
-            setExporting(false);
+            setIsGeneratingExcel(false);
         }
     };
 
-    const handlePrint = () => {
-        window.print();
+    // --- LÓGICA DE EXPORTACIÓN A PDF ---
+    const handleDownloadPDF = async () => {
+        setIsGeneratingPdf(true);
+        setShowExportMenu(false);
+        const input = dashboardRef.current;
+
+        if (!input) {
+            alert("No se pudo encontrar el contenido para generar el PDF.");
+            setIsGeneratingPdf(false);
+            return;
+        }
+
+        try {
+            // Capturar el contenido como imagen
+            const canvas = await html2canvas(input, {
+                scale: 2, // Mayor calidad
+                useCORS: true, // Para imágenes externas si las hubiera
+                logging: false,
+                windowWidth: input.scrollWidth,
+                windowHeight: input.scrollHeight
+            });
+
+            const imgData = canvas.toDataURL('image/png');
+            
+            // Crear PDF (A4 vertical)
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            
+            const imgWidth = canvas.width;
+            const imgHeight = canvas.height;
+            
+            // Calcular ratio para ajustar al ancho del PDF
+            const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+            
+            // Ajustar imagen en el PDF (margen de 10mm)
+            const imgX = (pdfWidth - imgWidth * ratio) / 2;
+            const imgY = 10; 
+
+            // Si el contenido es muy largo, jsPDF cortará o escalará. 
+            // Para dashboards de una página, 'addImage' con ajuste automático suele bastar.
+            // Aquí ajustamos al ancho total de la página A4
+            const contentWidth = pdfWidth - 20; // 10mm margen cada lado
+            const contentHeight = (imgHeight * contentWidth) / imgWidth;
+
+            pdf.addImage(imgData, 'PNG', 10, 10, contentWidth, contentHeight);
+            
+            const dateStr = new Date().toISOString().split('T')[0];
+            pdf.save(`Reporte_Dashboard_UCB_${dateStr}.pdf`);
+            
+        } catch (error) {
+            console.error("Error al generar PDF:", error);
+            alert("Hubo un error al generar el PDF.");
+        } finally {
+            setIsGeneratingPdf(false);
+        }
     };
 
     const handleRefresh = () => {
@@ -244,7 +313,7 @@ const Dashboard = () => {
         return filteredVisitas;
     };
 
-    // --- COMPONENTES REUTILIZABLES ---
+    // --- COMPONENTES REUTILIZABLES (Se mantienen igual, solo se renderizan) ---
     const KpiCard = ({ title, value, icon: Icon, trend, subtitle, color = 'blue', percentage = false }) => {
         const colorClasses = {
             blue: 'bg-gradient-to-r from-blue-50 to-blue-100 border-l-4 border-[#003366]',
@@ -339,8 +408,7 @@ const Dashboard = () => {
         );
     };
 
-    // Componente de gráfica mejorada
-    const EnhancedBarChart = ({ data, title, maxHeight = 180 }) => {
+    const EnhancedBarChart = ({ data, title }) => {
         if (!data.values || data.values.length === 0) {
             return (
                 <div className="text-center py-10">
@@ -373,14 +441,12 @@ const Dashboard = () => {
                 </div>
                 
                 <div className="relative">
-                    {/* Líneas de fondo */}
                     <div className="absolute inset-0 flex flex-col justify-between h-48">
                         {[0, 25, 50, 75, 100].map((percent) => (
                             <div key={percent} className="border-t border-gray-100"></div>
                         ))}
                     </div>
                     
-                    {/* Gráfica de barras */}
                     <div className="flex items-end h-48 space-x-1 md:space-x-2 relative z-10">
                         {data.values.map((value, index) => {
                             const height = maxValue > 0 ? (value / maxValue) * 100 : 0;
@@ -388,7 +454,6 @@ const Dashboard = () => {
                             
                             return (
                                 <div key={index} className="flex-1 flex flex-col items-center group">
-                                    {/* Barra con efecto hover */}
                                     <div className="relative w-full">
                                         <div 
                                             className={`w-full rounded-t-lg transition-all duration-300 group-hover:shadow-lg group-hover:-translate-y-1 ${
@@ -401,7 +466,6 @@ const Dashboard = () => {
                                                 minHeight: '20px'
                                             }}
                                         >
-                                            {/* Valor en la barra */}
                                             <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                                                 <div className="bg-gray-800 text-white text-xs font-semibold px-2 py-1 rounded whitespace-nowrap">
                                                     {value} visitas
@@ -412,50 +476,20 @@ const Dashboard = () => {
                                         </div>
                                     </div>
                                     
-                                    {/* Etiqueta inferior */}
                                     <div className="mt-2 text-center">
                                         <span className="text-xs font-medium text-gray-700">{data.labels[index]}</span>
-                                        <div className="text-xs text-gray-500 mt-1">
-                                            {value} <span className="text-gray-400">vis.</span>
-                                        </div>
                                     </div>
                                 </div>
                             );
                         })}
                     </div>
                     
-                    {/* Leyenda de valores */}
-                    <div className="flex justify-between text-xs text-gray-500 mt-2 px-1">
-                        <span>Mín: {minValue}</span>
-                        <span className="text-gray-700 font-medium">Promedio: {Math.round(data.values.reduce((a, b) => a + b, 0) / data.values.length)}</span>
-                        <span>Máx: {maxValue}</span>
-                    </div>
-                    
-                    {/* Eje Y */}
                     <div className="absolute -left-8 top-0 bottom-0 flex flex-col justify-between text-xs text-gray-500">
                         {maxValue > 0 && [100, 75, 50, 25, 0].map((percent) => (
                             <span key={percent}>
                                 {Math.round((percent / 100) * maxValue)}
                             </span>
                         ))}
-                    </div>
-                </div>
-                
-                {/* Resumen estadístico */}
-                <div className="mt-4 grid grid-cols-3 gap-2 text-sm">
-                    <div className="bg-blue-50 p-3 rounded-lg text-center">
-                        <div className="text-2xl font-bold text-[#003366]">{data.values.reduce((a, b) => a + b, 0)}</div>
-                        <div className="text-gray-600 text-xs">Total</div>
-                    </div>
-                    <div className="bg-green-50 p-3 rounded-lg text-center">
-                        <div className="text-2xl font-bold text-green-600">
-                            {Math.round(data.values.reduce((a, b) => a + b, 0) / data.values.length)}
-                        </div>
-                        <div className="text-gray-600 text-xs">Promedio</div>
-                    </div>
-                    <div className="bg-amber-50 p-3 rounded-lg text-center">
-                        <div className="text-2xl font-bold text-amber-600">{maxValue}</div>
-                        <div className="text-gray-600 text-xs">Pico</div>
                     </div>
                 </div>
             </div>
@@ -510,18 +544,16 @@ const Dashboard = () => {
         tendenciaColegios,
         tendenciaEstudiantes,
         tendenciaVisitas,
-        visitasPorMes,
         estudiantesPorEdad,
         colegiosPorCiudad,
         satisfaccionPromedio,
         metricasGenerales
     } = dashboardData;
 
-    // Filtrar visitas según el rango seleccionado
     const filteredVisitas = getFilteredData();
 
     return (
-        <div className="min-h-screen bg-gray-50 p-4 sm:p-8 font-sans">
+        <div className="min-h-screen bg-gray-50 p-4 sm:p-8 font-sans" ref={dashboardRef}>
             {/* HEADER */}
             <header className="mb-8">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
@@ -561,15 +593,39 @@ const Dashboard = () => {
                         >
                             <RefreshCw className="w-5 h-5 text-gray-600" />
                         </button>
-                        <button 
-                            onClick={handleExport}
-                            disabled={exporting}
-                            className="p-2 rounded-lg bg-[#003366] text-white hover:bg-[#004488] transition flex items-center shadow-sm"
-                            title="Exportar reporte"
-                        >
-                            <Download className="w-5 h-5" />
-                            {exporting && <span className="ml-2 text-sm">Exportando...</span>}
-                        </button>
+                        
+                        {/* BOTÓN DE DESCARGA CON MENÚ DESPLEGABLE */}
+                        <div className="relative">
+                            <button 
+                                onClick={() => setShowExportMenu(!showExportMenu)}
+                                className="p-2 rounded-lg bg-[#003366] text-white hover:bg-[#004488] transition flex items-center shadow-sm w-36 justify-center"
+                            >
+                                <Download className="w-5 h-5 mr-2" />
+                                <span className="text-sm font-medium">Exportar</span>
+                                {showExportMenu ? <ChevronUp className="w-4 h-4 ml-1" /> : <ChevronDown className="w-4 h-4 ml-1" />}
+                            </button>
+
+                            {showExportMenu && (
+                                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
+                                    <button
+                                        onClick={handleDownloadExcel}
+                                        disabled={isGeneratingExcel}
+                                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                                    >
+                                        <FileSpreadsheet className="w-4 h-4 mr-2 text-green-600" />
+                                        {isGeneratingExcel ? 'Generando Excel...' : 'Descargar Excel'}
+                                    </button>
+                                    <button
+                                        onClick={handleDownloadPDF}
+                                        disabled={isGeneratingPdf}
+                                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                                    >
+                                        <FilePdfIcon className="w-4 h-4 mr-2 text-red-600" />
+                                        {isGeneratingPdf ? 'Generando PDF...' : 'Descargar PDF'}
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
                 
@@ -591,13 +647,10 @@ const Dashboard = () => {
             </header>
 
             {/* RESUMEN GENERAL - KPI CARDS */}
-            <div className="mb-8">
+            <div className="mb-8" id="kpi-section">
                 <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center">
                     <Target className="w-5 h-5 mr-2 text-[#003366]" />
                     Indicadores Clave de Desempeño (KPI)
-                    <span className="ml-2 text-sm font-normal text-gray-500">
-                        • Período: {timeRange === 'hoy' ? 'Hoy' : timeRange === 'semana' ? 'Semanal' : timeRange === 'mes' ? 'Mensual' : 'Anual'}
-                    </span>
                 </h3>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -606,10 +659,7 @@ const Dashboard = () => {
                         value={totalColegios}
                         icon={School}
                         trend={tendenciaColegios}
-                        subtitle={timeRange === 'hoy' ? 'Nuevos hoy' : 
-                                timeRange === 'semana' ? 'Nuevos esta semana' : 
-                                timeRange === 'mes' ? 'Nuevos este mes' : 
-                                'Total registrados'}
+                        subtitle="Total registrados"
                         color="blue"
                     />
                     <KpiCard
@@ -617,10 +667,7 @@ const Dashboard = () => {
                         value={totalEstudiantes}
                         icon={Users}
                         trend={tendenciaEstudiantes}
-                        subtitle={timeRange === 'hoy' ? 'Nuevos hoy' : 
-                                timeRange === 'semana' ? 'Nuevos esta semana' : 
-                                timeRange === 'mes' ? 'Nuevos este mes' : 
-                                'Total en sistema'}
+                        subtitle="Total en sistema"
                         color="gold"
                     />
                     <KpiCard
@@ -628,10 +675,7 @@ const Dashboard = () => {
                         value={totalVisitas}
                         icon={Calendar}
                         trend={tendenciaVisitas}
-                        subtitle={timeRange === 'hoy' ? 'Programadas hoy' : 
-                                timeRange === 'semana' ? 'Esta semana' : 
-                                timeRange === 'mes' ? 'Este mes' : 
-                                'Programadas y realizadas'}
+                        subtitle="Total acumulado"
                         color="green"
                     />
                     <KpiCard
@@ -641,26 +685,16 @@ const Dashboard = () => {
                         trend={2.1}
                         subtitle="Promedio (1-5)"
                         color="purple"
-                        percentage={false}
                     />
                 </div>
 
                 {/* SEGUNDA FILA DE KPIs */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <KpiCard
-                        title={timeRange === 'hoy' ? 'Visitas Hoy' : 
-                               timeRange === 'semana' ? 'Visitas Semana' : 
-                               timeRange === 'mes' ? 'Visitas Mes' : 
-                               'Visitas Año'}
-                        value={timeRange === 'hoy' ? visitasHoy : 
-                               timeRange === 'semana' ? filteredVisitas.length : 
-                               timeRange === 'mes' ? filteredVisitas.length : 
-                               totalVisitas}
+                        title="Visitas del Período"
+                        value={filteredVisitas.length}
                         icon={CalendarDays}
-                        subtitle={timeRange === 'hoy' ? 'Programadas para hoy' : 
-                                timeRange === 'semana' ? 'Esta semana' : 
-                                timeRange === 'mes' ? 'Este mes' : 
-                                'Este año'}
+                        subtitle="Según filtro activo"
                         color="blue"
                     />
                     <KpiCard
@@ -691,12 +725,6 @@ const Dashboard = () => {
                             <PieChart className="w-5 h-5 mr-2 text-[#003366]" />
                             Distribución de Visitas por Estado
                         </h3>
-                        <div className="flex items-center space-x-2">
-                            <Info className="w-5 h-5 text-gray-400" />
-                            <span className="text-sm text-gray-500">
-                                Período: {timeRange}
-                            </span>
-                        </div>
                     </div>
                     
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -707,10 +735,7 @@ const Dashboard = () => {
                             </div>
                             <p className="text-2xl font-bold text-blue-800">{visitasProgramadas}</p>
                             <div className="w-full bg-blue-200 rounded-full h-2 mt-2">
-                                <div 
-                                    className="bg-blue-600 h-2 rounded-full transition-all duration-500" 
-                                    style={{ width: `${((visitasProgramadas || 0) / Math.max(totalVisitas || 1, 1)) * 100}%` }}
-                                ></div>
+                                <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${((visitasProgramadas || 0) / Math.max(totalVisitas || 1, 1)) * 100}%` }}></div>
                             </div>
                         </div>
                         
@@ -721,10 +746,7 @@ const Dashboard = () => {
                             </div>
                             <p className="text-2xl font-bold text-amber-800">{visitasEnCurso}</p>
                             <div className="w-full bg-amber-200 rounded-full h-2 mt-2">
-                                <div 
-                                    className="bg-amber-600 h-2 rounded-full transition-all duration-500" 
-                                    style={{ width: `${((visitasEnCurso || 0) / Math.max(totalVisitas || 1, 1)) * 100}%` }}
-                                ></div>
+                                <div className="bg-amber-600 h-2 rounded-full" style={{ width: `${((visitasEnCurso || 0) / Math.max(totalVisitas || 1, 1)) * 100}%` }}></div>
                             </div>
                         </div>
                         
@@ -735,10 +757,7 @@ const Dashboard = () => {
                             </div>
                             <p className="text-2xl font-bold text-green-800">{visitasFinalizadas}</p>
                             <div className="w-full bg-green-200 rounded-full h-2 mt-2">
-                                <div 
-                                    className="bg-green-600 h-2 rounded-full transition-all duration-500" 
-                                    style={{ width: `${((visitasFinalizadas || 0) / Math.max(totalVisitas || 1, 1)) * 100}%` }}
-                                ></div>
+                                <div className="bg-green-600 h-2 rounded-full" style={{ width: `${((visitasFinalizadas || 0) / Math.max(totalVisitas || 1, 1)) * 100}%` }}></div>
                             </div>
                         </div>
                         
@@ -749,10 +768,7 @@ const Dashboard = () => {
                             </div>
                             <p className="text-2xl font-bold text-red-800">{visitasCanceladas}</p>
                             <div className="w-full bg-red-200 rounded-full h-2 mt-2">
-                                <div 
-                                    className="bg-red-600 h-2 rounded-full transition-all duration-500" 
-                                    style={{ width: `${((visitasCanceladas || 0) / Math.max(totalVisitas || 1, 1)) * 100}%` }}
-                                ></div>
+                                <div className="bg-red-600 h-2 rounded-full" style={{ width: `${((visitasCanceladas || 0) / Math.max(totalVisitas || 1, 1)) * 100}%` }}></div>
                             </div>
                         </div>
                     </div>
@@ -766,7 +782,7 @@ const Dashboard = () => {
                     <div className="flex justify-between items-center mb-6">
                         <h3 className="text-xl font-bold text-gray-800 flex items-center">
                             <Award className="w-5 h-5 mr-2 text-[#003366]" />
-                            Top 5 Colegios con más Estudiantes
+                            Top Colegios
                         </h3>
                         <button 
                             onClick={() => setExpandedSection(expandedSection === 'colegios' ? '' : 'colegios')}
@@ -779,10 +795,10 @@ const Dashboard = () => {
                     
                     <div className="space-y-4">
                         {(estudiantesPorColegio || []).length > 0 ? (
-                            estudiantesPorColegio.map((colegio, index) => (
+                            estudiantesPorColegio.slice(0, 5).map((colegio, index) => (
                                 <div key={index} className="flex items-center justify-between p-4 hover:bg-gray-50 rounded-lg transition border border-gray-100 group">
                                     <div className="flex items-center">
-                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${index < 3 ? 'bg-[#FFD700] text-[#003366]' : 'bg-gray-100 text-gray-600'} font-bold mr-3 group-hover:scale-110 transition`}>
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${index < 3 ? 'bg-[#FFD700] text-[#003366]' : 'bg-gray-100 text-gray-600'} font-bold mr-3`}>
                                             {index + 1}
                                         </div>
                                         <div>
@@ -807,7 +823,7 @@ const Dashboard = () => {
                         )}
                     </div>
 
-                    {/* DISTRIBUCIÓN POR EDAD (solo si está expandido) */}
+                    {/* DISTRIBUCIÓN POR EDAD */}
                     {expandedSection === 'colegios' && (
                         <div className="mt-8 pt-6 border-t">
                             <h4 className="text-lg font-semibold text-gray-800 mb-4">Distribución de Estudiantes por Edad</h4>
@@ -817,7 +833,7 @@ const Dashboard = () => {
                                     label={`${item.edad} años`}
                                     value={item.cantidad || 0}
                                     max={Math.max(...(estudiantesPorEdad || []).map(e => e.cantidad || 0), 1)}
-                                    color={index === 0 ? 'blue' : index === 1 ? 'green' : index === 2 ? 'gold' : 'purple'}
+                                    color={index % 2 === 0 ? 'blue' : 'gold'}
                                 />
                             ))}
                         </div>
@@ -832,24 +848,18 @@ const Dashboard = () => {
                     <div className="flex justify-between items-center mb-6">
                         <h3 className="text-xl font-bold text-gray-800 flex items-center">
                             <Eye className="w-5 h-5 mr-2 text-[#003366]" />
-                            Visitas {timeRange === 'hoy' ? 'de Hoy' : 
-                                   timeRange === 'semana' ? 'de la Semana' : 
-                                   timeRange === 'mes' ? 'del Mes' : 
-                                   'del Año'}
+                            Visitas Recientes
                         </h3>
                         <div className="flex items-center space-x-2">
                             <span className="text-sm bg-blue-100 text-blue-800 px-3 py-1 rounded-full">
                                 {filteredVisitas.length} registros
                             </span>
-                            <span className="text-xs text-gray-500">
-                                Filtro: {timeRange}
-                            </span>
                         </div>
                     </div>
                     
-                    <div className="space-y-4">
+                    <div className="space-y-4 max-h-[400px] overflow-y-auto">
                         {filteredVisitas.length > 0 ? (
-                            filteredVisitas.slice(0, 5).map((visita) => (
+                            filteredVisitas.slice(0, 10).map((visita) => (
                                 <div key={visita.id} className="border border-gray-200 rounded-lg p-4 hover:bg-blue-50 transition group">
                                     <div className="flex justify-between items-start mb-2">
                                         <div>
@@ -867,9 +877,6 @@ const Dashboard = () => {
                                             <Clock className="w-4 h-4 mr-1" />
                                             {formatTime(visita.hora) || '--:--'}
                                         </div>
-                                        <div className="flex items-center">
-                                            <ChevronRight className="w-4 h-4 text-gray-400" />
-                                        </div>
                                     </div>
                                 </div>
                             ))
@@ -877,16 +884,6 @@ const Dashboard = () => {
                             <div className="text-center py-8">
                                 <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                                 <p className="text-gray-500">No hay visitas para el período seleccionado</p>
-                                <p className="text-sm text-gray-400 mt-1">Intenta cambiar el filtro de tiempo</p>
-                            </div>
-                        )}
-                        
-                        {filteredVisitas.length > 5 && (
-                            <div className="text-center pt-2">
-                                <button className="text-sm text-[#003366] font-medium hover:underline flex items-center justify-center mx-auto">
-                                    Ver todas las {filteredVisitas.length} visitas
-                                    <ChevronRight className="w-4 h-4 ml-1" />
-                                </button>
                             </div>
                         )}
                     </div>
@@ -899,17 +896,13 @@ const Dashboard = () => {
                             <LineChart className="w-5 h-5 mr-2 text-[#003366]" />
                             Métricas de Desempeño
                         </h3>
-                        <div className="flex items-center space-x-2">
-                            <Printer className="w-5 h-5 text-gray-400 cursor-pointer hover:text-gray-600" onClick={handlePrint} />
-                            <span className="text-xs text-gray-500">Actualizado: {new Date().toLocaleTimeString('es-ES', {hour: '2-digit', minute:'2-digit'})}</span>
-                        </div>
                     </div>
                     
                     <div className="grid grid-cols-2 gap-4 mb-6">
                         <div className="bg-gray-50 p-4 rounded-lg hover:shadow-md transition">
                             <div className="flex items-center mb-2">
                                 <Target className="w-4 h-4 mr-2 text-green-600" />
-                                <span className="text-sm font-medium text-gray-700">Tasa de Conversión</span>
+                                <span className="text-sm font-medium text-gray-700">Tasa Conversión</span>
                             </div>
                             <p className="text-2xl font-bold text-gray-900">{metricasGenerales?.tasaConversion || '0%'}</p>
                         </div>
@@ -919,13 +912,13 @@ const Dashboard = () => {
                                 <Clock className="w-4 h-4 mr-2 text-blue-600" />
                                 <span className="text-sm font-medium text-gray-700">Tiempo Promedio</span>
                             </div>
-                            <p className="text-2xl font-bold text-gray-900">{metricasGenerales?.tiempoPromedioVisita || '0 horas'}</p>
+                            <p className="text-2xl font-bold text-gray-900">{metricasGenerales?.tiempoPromedioVisita || '0h'}</p>
                         </div>
                         
                         <div className="bg-gray-50 p-4 rounded-lg hover:shadow-md transition">
                             <div className="flex items-center mb-2">
                                 <Users className="w-4 h-4 mr-2 text-purple-600" />
-                                <span className="text-sm font-medium text-gray-700">Estudiantes/Visita</span>
+                                <span className="text-sm font-medium text-gray-700">Est./Visita</span>
                             </div>
                             <p className="text-2xl font-bold text-gray-900">{metricasGenerales?.estudiantesPorVisita || 0}</p>
                         </div>
@@ -946,16 +939,13 @@ const Dashboard = () => {
                             Distribución por Ciudad
                         </h4>
                         <div className="space-y-3">
-                            {(colegiosPorCiudad || []).map((ciudad, index) => (
+                            {(colegiosPorCiudad || []).slice(0, 4).map((ciudad, index) => (
                                 <div key={index} className="flex items-center justify-between hover:bg-gray-50 p-2 rounded transition">
                                     <div className="flex items-center">
-                                        <div className={`w-3 h-3 rounded-full mr-3 ${index === 0 ? 'bg-[#003366]' : index === 1 ? 'bg-green-500' : index === 2 ? 'bg-[#FFD700]' : 'bg-purple-500'}`}></div>
+                                        <div className={`w-3 h-3 rounded-full mr-3 ${index === 0 ? 'bg-[#003366]' : index === 1 ? 'bg-green-500' : 'bg-[#FFD700]'}`}></div>
                                         <span className="text-gray-700">{ciudad.ciudad}</span>
                                     </div>
-                                    <div className="flex items-center">
-                                        <span className="font-medium text-gray-900 mr-2">{ciudad.cantidad || 0}</span>
-                                        <span className="text-xs text-gray-500">colegios</span>
-                                    </div>
+                                    <span className="font-medium text-gray-900">{ciudad.cantidad || 0}</span>
                                 </div>
                             ))}
                         </div>
@@ -963,50 +953,10 @@ const Dashboard = () => {
                 </div>
             </div>
 
-            {/* RESUMEN FINAL */}
-            <div className="mt-8 bg-gradient-to-r from-[#003366] to-blue-800 rounded-xl shadow-lg p-6 text-white">
-                <div className="flex flex-col md:flex-row justify-between items-center">
-                    <div>
-                        <h3 className="text-xl font-bold mb-2 flex items-center">
-                            <TrendingUpIcon className="w-6 h-6 mr-2 text-[#FFD700]" />
-                            Resumen del Período ({timeRange === 'hoy' ? 'Hoy' : 
-                                                 timeRange === 'semana' ? 'Esta semana' : 
-                                                 timeRange === 'mes' ? 'Este mes' : 
-                                                 'Este año'})
-                        </h3>
-                        <p className="text-gray-300">
-                            El sistema ha registrado un crecimiento del {Math.abs(tendenciaEstudiantes || 0).toFixed(1)}% en estudiantes 
-                            y {tendenciaColegios >= 0 ? 'un aumento' : 'una disminución'} del {Math.abs(tendenciaColegios || 0).toFixed(1)}% en colegios registrados.
-                            Se han realizado {filteredVisitas.length} visitas en el período seleccionado con una tasa de conversión del {metricasGenerales?.tasaConversion || '0%'}.
-                        </p>
-                    </div>
-                    <div className="mt-4 md:mt-0 text-center md:text-right">
-                        <p className="text-3xl font-bold">{totalReportes || 0}</p>
-                        <p className="text-gray-300">Reportes generados</p>
-                        <p className="text-sm text-gray-400 mt-1">Filtro activo: {timeRange}</p>
-                    </div>
-                </div>
-            </div>
-
             {/* FOOTER DEL DASHBOARD */}
             <div className="mt-8 text-center text-gray-500 text-sm">
-                <div className="flex flex-col md:flex-row justify-between items-center">
-                    <div className="mb-2 md:mb-0">
-                        <p>Última actualización: {new Date().toLocaleString('es-ES')}</p>
-                        <p className="mt-1 flex items-center justify-center md:justify-start">
-                            <span className="mr-2">Dashboard v1.0</span>
-                            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                            <span className="ml-2">Sistema conectado - Datos en tiempo real</span>
-                        </p>
-                    </div>
-                    <div className="text-xs text-gray-400">
-                        <span className="flex items-center">
-                            <Filter className="w-3 h-3 mr-1" />
-                            Filtro activo: {timeRange} • 
-                            Visitas mostradas: {filteredVisitas.length}
-                        </span>
-                    </div>
-                </div>
+                <p>Dashboard v1.2 • UCB Gestión de Visitas</p>
+                <p className="text-xs mt-1">Generado el {new Date().toLocaleString()}</p>
             </div>
         </div>
     );
