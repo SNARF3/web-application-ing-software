@@ -624,7 +624,7 @@ const GestionColegiosYEstudiantes = () => {
                     ci: s.ci,
                     email: s.correo || s.email,
                     collegeId: s.id_colegio,
-                    colegio: selectedCollege.nombre
+                    colegio: selectedCollege.id_colegio
                 }));
                 
                 setEstudiantes(prev => [...prev, ...mappedStudents]);
@@ -713,7 +713,7 @@ const GestionColegiosYEstudiantes = () => {
                 showFeedback('error', 'No se pudo actualizar el estudiante.');
             });
         } else {
-            const body = { nombre: studentFormData.nombre, ci: studentFormData.ci, correo: studentFormData.email, id_colegio: selectedCollege.id };
+            const body = { nombre: studentFormData.nombre, ci: studentFormData.ci, correo: studentFormData.email, id_colegio: selectedCollege.id_colegio };
             fetch('http://localhost:3000/estudiantes', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
